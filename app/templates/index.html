@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FaceUp — Emotion Recognition</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Face<span>Up</span></h1>
+    <span id="server-status" class="pill pill--muted">connecting…</span>
+  </header>
+
+  <main class="layout">
+    <!-- Left: input + preview -->
+    <section class="panel">
+      <div class="tabs" role="tablist">
+        <button class="tab is-active" data-tab="upload" role="tab">Upload image</button>
+        <button class="tab" data-tab="webcam" role="tab">Webcam</button>
+      </div>
+
+      <!-- Upload tab -->
+      <div class="tabpanel is-active" data-panel="upload">
+        <label id="dropzone" class="dropzone" for="file-input">
+          <input id="file-input" type="file" accept="image/*" hidden />
+          <span class="dropzone__icon">⬆</span>
+          <span class="dropzone__text">Click to choose an image<br /><small>or drag &amp; drop a photo here</small></span>
+        </label>
+      </div>
+
+      <!-- Webcam tab (wired up in M4) -->
+      <div class="tabpanel" data-panel="webcam">
+        <div class="webcam-placeholder">
+          <p>Live webcam detection — coming in the next step.</p>
+        </div>
+      </div>
+
+      <!-- Shared preview stage: image/video drawn here, boxes overlaid -->
+      <div id="stage" class="stage is-empty">
+        <canvas id="overlay"></canvas>
+        <p class="stage__hint">No image yet</p>
+      </div>
+    </section>
+
+    <!-- Right: results -->
+    <aside class="panel results" id="results">
+      <h2>Result</h2>
+      <div id="result-empty" class="muted">Analyse an image to see emotions.</div>
+
+      <div id="result-body" hidden>
+        <div class="dominant">
+          <span id="dominant-emoji" class="dominant__emoji">🙂</span>
+          <div>
+            <div id="dominant-label" class="dominant__label">—</div>
+            <div id="dominant-score" class="dominant__score">—</div>
+          </div>
+        </div>
+
+        <div id="bars" class="bars"></div>
+
+        <div class="meta">
+          <span id="face-count">0 faces</span>
+          <span id="infer-ms">— ms</span>
+        </div>
+      </div>
+
+      <div id="result-error" class="error" hidden></div>
+    </aside>
+  </main>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

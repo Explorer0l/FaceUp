@@ -1,0 +1,17 @@
+# FaceUp — pinned dependencies (Python 3.11)
+# Web
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+jinja2==3.1.5
+
+# ML / vision
+deepface==0.0.93
+tf-keras==2.18.0          # Risk #1: DeepFace needs legacy Keras on TF 2.16+
+tensorflow==2.18.0
+opencv-python==4.10.0.84
+numpy==1.26.4
+pillow==11.1.0
+
+# Dev / tests
+pytest==8.3.4

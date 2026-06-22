@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"C:/Users/shahz/Desktop/XMUM/Python & TensorFlow/Assignments/Final_Project/FaceUp\" 2>/dev/null; echo \"---SIZE---\"; wc -c \"C:/Users/shahz/Desktop/New Text Document.txt\")",
+      "Bash(py -0p)",
+      "Bash(python -m pip --version)"
+    ]
+  }
+}

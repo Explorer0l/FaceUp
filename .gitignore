@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# DeepFace downloads its model weights here on first run
+.deepface/
+
+# Env / IDE
+.env
+.idea/
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Runtime logs
+*.log
