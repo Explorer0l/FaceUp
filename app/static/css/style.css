@@ -107,13 +107,27 @@ body {
 .dropzone:hover, .dropzone.is-drag { border-color: var(--accent); color: var(--fg); background: #161b27; }
 .dropzone__icon { font-size: 1.8rem; }
 
-.webcam-placeholder {
-  padding: 2rem;
-  text-align: center;
-  color: var(--muted);
-  border: 1px dashed var(--border);
-  border-radius: 12px;
+.webcam-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
 }
+.hint { font-size: 0.8rem; margin: 0.8rem 0 0; }
+
+.btn {
+  padding: 0.6rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.15s;
+}
+.btn:hover { border-color: var(--accent); }
+.btn--accent { background: var(--accent); border-color: var(--accent); color: #0b1220; font-weight: 600; }
+.btn--accent:hover { filter: brightness(1.08); }
+.btn.is-on { background: var(--emo-angry); border-color: var(--emo-angry); color: #fff; }
 
 /* ---- Stage / preview ---- */
 .stage {
