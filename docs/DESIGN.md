@@ -87,7 +87,7 @@ Empty `faces` = no face detected (handled gracefully, not an error).
 
 - [x] **M1** Env + FastAPI skeleton + `/health`
 - [x] **M2** `emotion.py` service + warm-up + unit tests (verified: warmup loads model, `/health` reports ready)
-- [ ] **M3** Upload path end-to-end
+- [x] **M3** Upload path end-to-end (UI + drag/drop + box overlay + confidence bars; HTTP path verified, 422 on bad input)
 - [ ] **M4** Webcam real-time path + canvas overlay
 - [ ] **M5** UI polish (confidence bars, labels)
 - [ ] **M6** Report + slides + screenshots
