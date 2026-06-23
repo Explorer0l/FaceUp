@@ -98,11 +98,42 @@ Empty `faces` = no face detected (handled gracefully, not an error).
 - [ ] **M6** Report + slides + screenshots
 - [ ] **M7** Hardening, error states, README
 
+### Phase 2 — emotion-driven music + focus (pivot 2026-06-24)
+
+The product expands: the emotion engine becomes the *input* to a music
+recommender. Stack additions — Jamendo API + user uploads, Match/Lift toggle,
+SQLite (SQLModel) for stats, Yandex-Music-style UI whose hero gradient is tinted
+by the current emotion.
+
+- [x] **P1** New UI shell — sidebar nav, vibe hero (emotion-tinted), persistent
+  player, ES-module frontend (`main/router/moodScan/vibe/focus/player/bus/api/
+  emotions`). Mood scan migrated intact; Vibe tiles + Match/Lift + Focus timer
+  working; recos are samples (P2). Stats/Collection/Add/Search are stubs.
+- [ ] **P2** Music backend — Jamendo client + recommendation service (emotion →
+  mood tags, Match/Lift); persistent player plays real tracks.
+- [ ] **P3** User uploads — upload audio, tag by mood, store in SQLite; joins pool.
+- [ ] **P4** Mood→vibe flow — "scan my face" → recommend, plus manual tiles.
+- [ ] **P5** Focus station music + auto-pause options.
+- [ ] **P6** Stats — SQLite session/mood logging + charts.
+- [ ] **P7** Polish + report/slides.
+
 ## 7. Open questions / future
 
-- Detector backend default is `opencv` (fast). Switch to `mtcnn`/`retinaface`
-  for higher-accuracy upload analysis if time allows.
+- Detector backend is chosen **per mode**: `ssd` for webcam (~34 ms/frame,
+  DNN-based, real-time) and `mtcnn` for upload (~158 ms, more accurate). The
+  request carries a `mode` field; both backends are warmed at startup.
+  `retinaface` is the most accurate but ~3.7 s/frame on CPU — too slow to use.
+  Benchmarked 2026-06-24 at 640x480.
 - Multi-face handling is supported by the schema (a list); UI currently
   designed around the largest/first face.
 - Webcam now defaults to a mirrored (selfie) view; box coordinates are flipped
   to stay aligned. Toggle in the Webcam tab.
+- **Temporal smoothing (webcam):** raw per-frame guesses flicker and read as
+  inaccurate. The client buffers the last ~1.5 s of score vectors, averages
+  them, shows "⏳ analyzing…" for the first ~0.7 s, then announces the smoothed
+  dominant — switching labels only when a challenger leads the incumbent by
+  ≥6 % (hysteresis). Tunables: `SMOOTH_WINDOW_MS`, `SMOOTH_MIN_MS`,
+  `SWITCH_MARGIN` in `app.js`. Upload (single image) is unaffected.
+- Possible follow-up if a class is systematically over-predicted (e.g. neutral
+  faces read as "surprised" because DeepFace leaks "fear"): revisit the
+  `EMOTION_GROUPS` mapping (e.g. map fear elsewhere, or group by max not sum).

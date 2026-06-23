@@ -86,8 +86,10 @@ def _to_face_results(detections: list[dict]) -> list[FaceResult]:
     return results
 
 
-def analyze_frame(frame: np.ndarray) -> tuple[list[FaceResult], int]:
-    """Run emotion analysis on a BGR frame.
+def analyze_frame(
+    frame: np.ndarray, detector_backend: str
+) -> tuple[list[FaceResult], int]:
+    """Run emotion analysis on a BGR frame with the given detector backend.
 
     Returns ``(faces, infer_ms)``. An empty list means no face was found.
     """
@@ -97,7 +99,7 @@ def analyze_frame(frame: np.ndarray) -> tuple[list[FaceResult], int]:
     detections = DeepFace.analyze(
         img_path=frame,
         actions=("emotion",),
-        detector_backend=settings.detector_backend,
+        detector_backend=detector_backend,
         enforce_detection=settings.enforce_detection,
         silent=True,
     )
@@ -118,12 +120,15 @@ def warmup() -> None:
     """
     global _model_ready
     dummy = np.zeros((224, 224, 3), dtype=np.uint8)
-    try:
-        analyze_frame(dummy)
-    except Exception:  # noqa: BLE001 — warmup must never crash the server
-        # A blank image legitimately has no face; that's fine. We only care
-        # that the model weights got loaded into memory.
-        pass
+    # Warm the emotion model and *both* detector backends (their weights download
+    # and load on first use), so the first real request of either mode is fast.
+    for backend in {settings.detector_webcam, settings.detector_upload}:
+        try:
+            analyze_frame(dummy, backend)
+        except Exception:  # noqa: BLE001 — warmup must never crash the server
+            # A blank image legitimately has no face; that's fine. We only care
+            # that the model weights got loaded into memory.
+            pass
     _model_ready = True
 
 

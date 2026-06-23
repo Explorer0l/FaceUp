@@ -26,8 +26,13 @@ py -3.11 -m venv .venv
 pip install -r requirements.txt
 ```
 
-> **First run downloads the emotion model weights** (~a few MB) into
-> `~/.deepface/`. Do this once *before* presenting (Risk #6).
+> **First run downloads model weights** (the emotion model plus the `ssd` and
+> `mtcnn` face detectors, ~tens of MB) into `~/.deepface/`. Do this once
+> *before* presenting (Risk #6).
+
+Face detection uses a per-mode backend — `ssd` for the live webcam (fast) and
+`mtcnn` for uploads (more accurate). Override with `FACEUP_DETECTOR_WEBCAM` /
+`FACEUP_DETECTOR_UPLOAD` if desired.
 
 ## Run
 
