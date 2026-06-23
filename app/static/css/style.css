@@ -147,6 +147,31 @@ body {
 .stage__hint { color: var(--muted); position: absolute; }
 .stage:not(.is-empty) .stage__hint { display: none; }
 
+/* ---- Live HUD (over the webcam feed) ---- */
+.hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.7rem;
+  background: rgba(15, 17, 21, 0.72);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+.hud__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+  box-shadow: 0 0 8px currentColor;
+}
+.hud__meta { color: var(--muted); font-variant-numeric: tabular-nums; }
+
 /* ---- Results ---- */
 .results h2 { margin-top: 0; font-size: 1.1rem; }
 .muted { color: var(--muted); }

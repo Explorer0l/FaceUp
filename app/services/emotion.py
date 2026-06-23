@@ -16,7 +16,7 @@ import time
 import cv2
 import numpy as np
 
-from app.config import EMOTION_LABELS, settings
+from app.config import EMOTION_GROUPS, settings
 from app.schemas import Box, FaceResult
 
 # DeepFace is imported lazily inside functions: importing it pulls in
@@ -60,13 +60,14 @@ def _to_face_results(detections: list[dict]) -> list[FaceResult]:
             continue
 
         raw_scores = det.get("emotion", {}) or {}
+        # Collapse the raw 7 classes into our reduced set by summing each group.
         scores = {
-            label: round(float(raw_scores.get(label, 0.0)), 2)
-            for label in EMOTION_LABELS
+            group: round(
+                sum(float(raw_scores.get(member, 0.0)) for member in members), 2
+            )
+            for group, members in EMOTION_GROUPS.items()
         }
-        dominant = det.get("dominant_emotion") or (
-            max(scores, key=scores.get) if scores else "unknown"
-        )
+        dominant = max(scores, key=scores.get) if scores else "unknown"
         if scores.get(dominant, 0.0) < settings.min_confidence:
             continue
 

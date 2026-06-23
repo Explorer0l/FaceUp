@@ -1,9 +1,11 @@
 # FaceUp
 
 Facial **emotion recognition** web app. Detects faces from a webcam feed or an
-uploaded image and classifies the expression (happy, sad, angry, surprise,
-fear, disgust, neutral) using [DeepFace](https://github.com/serengil/deepface)
-on a TensorFlow/Keras backend, served through a FastAPI web app.
+uploaded image and classifies the expression into five clear emotions (happy,
+sad, angry, surprised, neutral) using
+[DeepFace](https://github.com/serengil/deepface) on a TensorFlow/Keras backend,
+served through a FastAPI web app. DeepFace's 7 raw classes are grouped
+server-side (disgust→angry, fear→surprised) for a clearer, more reliable read.
 
 > Course final project — Python & TensorFlow.
 
