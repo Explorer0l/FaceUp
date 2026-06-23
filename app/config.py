@@ -17,9 +17,15 @@ def _env(name: str, default: str) -> str:
 @dataclass(frozen=True)
 class Settings:
     # --- Model / inference ---------------------------------------------------
-    # DeepFace face-detector backend. "opencv" is fast (good for live webcam);
-    # "mtcnn" / "retinaface" are slower but more accurate (good for uploads).
-    detector_backend: str = _env("DETECTOR_BACKEND", "opencv")
+    # DeepFace face-detector backend, chosen per input mode (benchmarked on CPU
+    # at 640x480):
+    #   webcam -> "ssd"  (~34 ms): DNN-based, ~as fast as Haar but far more
+    #                              robust to angle/lighting/glasses.
+    #   upload -> "mtcnn" (~225 ms): more accurate on angled/small faces; fine
+    #                                for a one-shot photo.
+    # ("retinaface" is the most accurate but ~3.7 s/frame here — too slow.)
+    detector_webcam: str = _env("DETECTOR_WEBCAM", "ssd")
+    detector_upload: str = _env("DETECTOR_UPLOAD", "mtcnn")
 
     # If True, DeepFace raises when no face is found. We keep it False and
     # handle the empty case ourselves (Risk #4).
