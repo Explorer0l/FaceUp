@@ -7,14 +7,13 @@
  * the webcam path in M4 — only the frame *source* differs.
  * ======================================================================== */
 
+// Reduced, clearer set — must match the server's EMOTION_GROUPS keys/order.
 const EMOTIONS = {
-  angry:    { emoji: "😠", color: "#ff5c5c" },
-  disgust:  { emoji: "🤢", color: "#7bcf6a" },
-  fear:     { emoji: "😨", color: "#b58bff" },
-  happy:    { emoji: "😄", color: "#ffd24a" },
-  sad:      { emoji: "😢", color: "#5aa9ff" },
-  surprise: { emoji: "😲", color: "#ff9f43" },
-  neutral:  { emoji: "😐", color: "#9aa0a6" },
+  happy:     { emoji: "😄", color: "#ffd24a" },
+  sad:       { emoji: "😢", color: "#5aa9ff" },
+  angry:     { emoji: "😠", color: "#ff5c5c" },
+  surprised: { emoji: "😲", color: "#ff9f43" },
+  neutral:   { emoji: "😐", color: "#9aa0a6" },
 };
 const EMOTION_ORDER = Object.keys(EMOTIONS);
 
@@ -74,14 +73,24 @@ async function analyzeDataURL(dataURL) {
 // ---- Rendering ------------------------------------------------------------
 /** Draw the source (image or video frame) plus detection boxes onto #overlay.
  *  `source` is anything drawImage accepts; w/h are its natural pixel size. */
-function drawOverlay(source, w, h, faces) {
+function drawOverlay(source, w, h, faces, mirror = false) {
   // Only resize when needed — the webcam display loop calls this ~60×/sec and
   // reassigning width/height every frame would clear + thrash the canvas.
   if (overlay.width !== w || overlay.height !== h) {
     overlay.width = w;
     overlay.height = h;
   }
-  ctx.drawImage(source, 0, 0, w, h);
+  // Mirror only the video pixels (selfie view); boxes/labels are positioned
+  // manually below so the text never comes out reversed.
+  if (mirror) {
+    ctx.save();
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(source, 0, 0, w, h);
+    ctx.restore();
+  } else {
+    ctx.drawImage(source, 0, 0, w, h);
+  }
 
   const lineW = Math.max(2, Math.round(w / 250));
   ctx.lineWidth = lineW;
@@ -89,7 +98,9 @@ function drawOverlay(source, w, h, faces) {
   ctx.textBaseline = "top";
 
   for (const f of faces) {
-    const { x, y, w: bw, h: bh } = f.box;
+    const { y, w: bw, h: bh } = f.box;
+    // When mirrored, flip the box x to match the mirrored video.
+    const x = mirror ? w - (f.box.x + bw) : f.box.x;
     const color = (EMOTIONS[f.dominant] || EMOTIONS.neutral).color;
     const emoji = (EMOTIONS[f.dominant] || EMOTIONS.neutral).emoji;
     ctx.strokeStyle = color;
@@ -250,7 +261,7 @@ let latestFaces = [];
 function displayLoop() {
   if (!stream) return;
   if (video.videoWidth) {
-    drawOverlay(video, video.videoWidth, video.videoHeight, latestFaces);
+    drawOverlay(video, video.videoWidth, video.videoHeight, latestFaces, mirror);
   }
   rafId = requestAnimationFrame(displayLoop);
 }
@@ -265,6 +276,9 @@ async function inferLoop() {
     const dataURL = captureCanvas.toDataURL("image/jpeg", 0.7);
     const data = await analyzeDataURL(dataURL);
     latestFaces = data.faces || [];
+    trackFps();
+    lastMs = data.infer_ms;
+    updateHud(latestFaces);
     renderResults(data);
   } catch (e) {
     camStatus.textContent = `error: ${e.message}`;
@@ -286,6 +300,8 @@ async function startCamera() {
     camToggle.classList.add("is-on");
     camStatus.textContent = "live";
     stage.classList.remove("is-empty");
+    resetFps();
+    $("#hud").hidden = false;
     rafId = requestAnimationFrame(displayLoop);
     inferTimer = setInterval(inferLoop, INFER_INTERVAL_MS);
   } catch (e) {
@@ -307,6 +323,7 @@ function stopCamera() {
   video.srcObject = null;
   inflight = false;
   latestFaces = [];
+  $("#hud").hidden = true;
   camToggle.textContent = "Start camera";
   camToggle.classList.remove("is-on");
   camStatus.textContent = "camera off";
@@ -319,6 +336,40 @@ camToggle.addEventListener("click", () => {
 
 // Free the camera when the page is hidden/closed.
 window.addEventListener("pagehide", stopCamera);
+
+// ---- Mirror toggle (selfie view) ------------------------------------------
+let mirror = true; // mirrored by default — feels natural like a selfie camera
+const mirrorToggle = $("#cam-mirror");
+mirrorToggle.addEventListener("click", () => {
+  mirror = !mirror;
+  mirrorToggle.classList.toggle("is-active", mirror);
+  mirrorToggle.textContent = mirror ? "Mirror: on" : "Mirror: off";
+});
+
+// ---- FPS / latency HUD ----------------------------------------------------
+// fpsEMA is an exponential moving average of the *actual* completed-inference
+// rate, so it reflects real throughput (which drops if the CPU is busy), not
+// the nominal 5fps target.
+let fpsEMA = 0;
+let lastFpsTs = 0;
+let lastMs = 0;
+function resetFps() { fpsEMA = 0; lastFpsTs = 0; lastMs = 0; }
+function trackFps() {
+  const now = performance.now();
+  if (lastFpsTs) {
+    const inst = 1000 / Math.max(1, now - lastFpsTs);
+    fpsEMA = fpsEMA ? fpsEMA * 0.7 + inst * 0.3 : inst;
+  }
+  lastFpsTs = now;
+}
+function updateHud(faces) {
+  const found = faces.length > 0;
+  $("#hud-dot").style.background = found ? "#7bcf6a" : "#9aa0a6";
+  $("#hud-status").textContent = found
+    ? `${faces.length} face${faces.length > 1 ? "s" : ""} detected`
+    : "searching…";
+  $("#hud-meta").textContent = `${fpsEMA.toFixed(1)} fps · ${lastMs} ms`;
+}
 
 // ---- Boot -----------------------------------------------------------------
 checkHealth();
