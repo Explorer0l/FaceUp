@@ -29,11 +29,14 @@
         </label>
       </div>
 
-      <!-- Webcam tab (wired up in M4) -->
+      <!-- Webcam tab -->
       <div class="tabpanel" data-panel="webcam">
-        <div class="webcam-placeholder">
-          <p>Live webcam detection — coming in the next step.</p>
+        <video id="webcam" playsinline muted hidden></video>
+        <div class="webcam-controls">
+          <button id="cam-toggle" class="btn btn--accent" type="button">Start camera</button>
+          <span id="cam-status" class="muted">camera off</span>
         </div>
+        <p class="hint muted">Live detection runs ~5×/sec on your camera feed. Nothing is uploaded or stored — frames go only to the local server.</p>
       </div>
 
       <!-- Shared preview stage: image/video drawn here, boxes overlaid -->
