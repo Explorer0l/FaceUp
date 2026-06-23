@@ -42,7 +42,8 @@ async def health() -> HealthResponse:
     return HealthResponse(
         status="ok",
         model_ready=emotion.is_ready(),
-        detector_backend=settings.detector_backend,
+        detector_webcam=settings.detector_webcam,
+        detector_upload=settings.detector_upload,
     )
 
 
@@ -53,6 +54,10 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     except emotion.ImageDecodeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
+    # Fast detector for live webcam, accurate detector for one-shot uploads.
+    backend = (
+        settings.detector_webcam if req.mode == "webcam" else settings.detector_upload
+    )
     # DeepFace inference is CPU-bound and blocking — keep it off the event loop.
-    faces, infer_ms = await run_in_threadpool(emotion.analyze_frame, frame)
+    faces, infer_ms = await run_in_threadpool(emotion.analyze_frame, frame, backend)
     return AnalyzeResponse(faces=faces, infer_ms=infer_ms)
