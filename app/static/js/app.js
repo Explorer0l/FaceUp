@@ -29,7 +29,7 @@ async function checkHealth() {
   try {
     const data = await (await fetch("/health")).json();
     if (data.model_ready) {
-      el.textContent = `ready · ${data.detector_backend}`;
+      el.textContent = `ready · cam:${data.detector_webcam} · img:${data.detector_upload}`;
       el.className = "pill pill--ok";
     } else {
       el.textContent = "warming up…";
@@ -56,12 +56,13 @@ document.querySelectorAll(".tab").forEach((tab) => {
 });
 
 // ---- Core: call the backend ----------------------------------------------
-/** POST a data-URL/base64 image to the API. Returns {faces, infer_ms}. */
-async function analyzeDataURL(dataURL) {
+/** POST a data-URL/base64 image to the API. Returns {faces, infer_ms}.
+ *  `mode` ("upload"|"webcam") selects the server-side detector backend. */
+async function analyzeDataURL(dataURL, mode = "upload") {
   const res = await fetch("/api/analyze", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ image: dataURL }),
+    body: JSON.stringify({ image: dataURL, mode }),
   });
   if (!res.ok) {
     const detail = await res.json().catch(() => ({}));
@@ -101,13 +102,23 @@ function drawOverlay(source, w, h, faces, mirror = false) {
     const { y, w: bw, h: bh } = f.box;
     // When mirrored, flip the box x to match the mirrored video.
     const x = mirror ? w - (f.box.x + bw) : f.box.x;
-    const color = (EMOTIONS[f.dominant] || EMOTIONS.neutral).color;
-    const emoji = (EMOTIONS[f.dominant] || EMOTIONS.neutral).emoji;
+
+    // `_view` lets the webcam path show the *smoothed* label (or "analyzing…")
+    // instead of the raw per-frame dominant. Upload faces have no _view.
+    const view = f._view ?? {
+      emotion: f.dominant,
+      score: f.scores[f.dominant] ?? 0,
+      analyzing: false,
+    };
+    const color = view.analyzing
+      ? "#9aa0a6"
+      : (EMOTIONS[view.emotion] || EMOTIONS.neutral).color;
     ctx.strokeStyle = color;
     ctx.strokeRect(x, y, bw, bh);
 
-    const score = f.scores[f.dominant] ?? 0;
-    const label = `${emoji} ${f.dominant} ${score.toFixed(0)}%`;
+    const label = view.analyzing
+      ? "⏳ analyzing…"
+      : `${(EMOTIONS[view.emotion] || EMOTIONS.neutral).emoji} ${view.emotion} ${view.score.toFixed(0)}%`;
     const pad = lineW * 2;
     const tw = ctx.measureText(label).width + pad * 2;
     const th = parseInt(ctx.font, 10) + pad;
@@ -206,7 +217,7 @@ function loadFile(file) {
     drawOverlay(img, img.naturalWidth, img.naturalHeight, []);
     try {
       const dataURL = overlay.toDataURL("image/jpeg", 0.92);
-      const data = await analyzeDataURL(dataURL);
+      const data = await analyzeDataURL(dataURL, "upload");
       drawOverlay(img, img.naturalWidth, img.naturalHeight, data.faces || []);
       renderResults(data);
     } catch (e) {
@@ -274,12 +285,10 @@ async function inferLoop() {
     captureCanvas.height = video.videoHeight;
     captureCtx.drawImage(video, 0, 0);
     const dataURL = captureCanvas.toDataURL("image/jpeg", 0.7);
-    const data = await analyzeDataURL(dataURL);
-    latestFaces = data.faces || [];
+    const data = await analyzeDataURL(dataURL, "webcam");
     trackFps();
     lastMs = data.infer_ms;
-    updateHud(latestFaces);
-    renderResults(data);
+    handleWebcamResult(data);
   } catch (e) {
     camStatus.textContent = `error: ${e.message}`;
   } finally {
@@ -301,6 +310,7 @@ async function startCamera() {
     camStatus.textContent = "live";
     stage.classList.remove("is-empty");
     resetFps();
+    resetSmoothing();
     $("#hud").hidden = false;
     rafId = requestAnimationFrame(displayLoop);
     inferTimer = setInterval(inferLoop, INFER_INTERVAL_MS);
@@ -323,6 +333,7 @@ function stopCamera() {
   video.srcObject = null;
   inflight = false;
   latestFaces = [];
+  resetSmoothing();
   $("#hud").hidden = true;
   camToggle.textContent = "Start camera";
   camToggle.classList.remove("is-on");
@@ -362,13 +373,124 @@ function trackFps() {
   }
   lastFpsTs = now;
 }
-function updateHud(faces) {
-  const found = faces.length > 0;
-  $("#hud-dot").style.background = found ? "#7bcf6a" : "#9aa0a6";
-  $("#hud-status").textContent = found
-    ? `${faces.length} face${faces.length > 1 ? "s" : ""} detected`
-    : "searching…";
+function setHud(color, status) {
+  $("#hud-dot").style.background = color;
+  $("#hud-status").textContent = status;
   $("#hud-meta").textContent = `${fpsEMA.toFixed(1)} fps · ${lastMs} ms`;
+}
+
+// ---- Temporal smoothing (webcam) ------------------------------------------
+// Instead of announcing each frame's raw guess (which flickers and looks
+// inaccurate), we collect the last ~1.5s of score vectors, average them, and
+// only announce once enough data is in — then switch the announced emotion only
+// when a challenger clearly overtakes the incumbent (hysteresis). The reading
+// settles on a stable, more trustworthy result.
+const SMOOTH_WINDOW_MS = 1500; // averaging window
+const SMOOTH_MIN_MS = 700;     // collect at least this much before announcing
+const SWITCH_MARGIN = 6;       // challenger must lead incumbent by this many %
+let scoreBuffer = [];          // [{ t, scores }]
+let announced = null;          // currently announced emotion
+
+function resetSmoothing() {
+  scoreBuffer = [];
+  announced = null;
+}
+
+function smoothedScores() {
+  const avg = {};
+  for (const name of EMOTION_ORDER) avg[name] = 0;
+  for (const s of scoreBuffer)
+    for (const name of EMOTION_ORDER) avg[name] += s.scores[name] ?? 0;
+  const n = scoreBuffer.length || 1;
+  for (const name of EMOTION_ORDER) avg[name] /= n;
+  return avg;
+}
+
+function pickAnnounced(avg) {
+  let top = EMOTION_ORDER[0];
+  for (const name of EMOTION_ORDER) if (avg[name] > avg[top]) top = name;
+  // Keep the incumbent unless the challenger leads it by the margin.
+  if (announced && top !== announced && avg[top] - avg[announced] < SWITCH_MARGIN) {
+    return announced;
+  }
+  announced = top;
+  return announced;
+}
+
+function handleWebcamResult(data) {
+  const faces = data.faces || [];
+  const primary = faces.length
+    ? faces.reduce((a, b) => ((b.scores[b.dominant] ?? 0) > (a.scores[a.dominant] ?? 0) ? b : a))
+    : null;
+
+  if (!primary) {
+    resetSmoothing();
+    latestFaces = [];
+    setHud("#9aa0a6", "searching…");
+    renderSmoothedPanel({ kind: "noface" });
+    return;
+  }
+
+  const now = performance.now();
+  scoreBuffer.push({ t: now, scores: primary.scores });
+  while (scoreBuffer.length && scoreBuffer[0].t < now - SMOOTH_WINDOW_MS) {
+    scoreBuffer.shift();
+  }
+
+  const span = scoreBuffer.length > 1 ? now - scoreBuffer[0].t : 0;
+  const avg = smoothedScores();
+  latestFaces = faces; // keep all boxes; the primary carries the label below
+
+  if (span >= SMOOTH_MIN_MS) {
+    const dom = pickAnnounced(avg);
+    primary._view = { emotion: dom, score: avg[dom], analyzing: false };
+    setHud((EMOTIONS[dom] || EMOTIONS.neutral).color, `${dom} · stable`);
+    renderSmoothedPanel({ kind: "ready", avg, dom, faceCount: faces.length });
+  } else {
+    primary._view = { analyzing: true };
+    setHud("#ffd24a", "analyzing…");
+    renderSmoothedPanel({ kind: "analyzing", avg, faceCount: faces.length });
+  }
+}
+
+/** Render the results panel from smoothed (time-averaged) webcam scores. */
+function renderSmoothedPanel({ kind, avg, dom, faceCount }) {
+  $("#result-error").hidden = true;
+  $("#result-empty").hidden = true;
+  $("#result-body").hidden = false;
+  ensureBars();
+
+  if (kind === "noface") {
+    $("#dominant-emoji").textContent = "🔍";
+    $("#dominant-label").textContent = "no face";
+    $("#dominant-score").textContent = "—";
+    for (const n of EMOTION_ORDER) {
+      barFills[n].style.width = "0%";
+      barVals[n].textContent = "0%";
+    }
+    $("#face-count").textContent = "0 faces";
+    $("#infer-ms").textContent = `${lastMs} ms`;
+    return;
+  }
+
+  // analyzing + ready both show the averaged bars (so you watch it converge).
+  for (const n of EMOTION_ORDER) {
+    const v = avg[n] ?? 0;
+    barFills[n].style.width = `${Math.min(100, v)}%`;
+    barVals[n].textContent = `${v.toFixed(1)}%`;
+  }
+  $("#face-count").textContent = `${faceCount} face${faceCount > 1 ? "s" : ""}`;
+  $("#infer-ms").textContent = `${lastMs} ms`;
+
+  if (kind === "analyzing") {
+    $("#dominant-emoji").textContent = "⏳";
+    $("#dominant-label").textContent = "analyzing…";
+    $("#dominant-score").textContent = "hold still a moment";
+  } else {
+    $("#dominant-emoji").textContent = (EMOTIONS[dom] || EMOTIONS.neutral).emoji;
+    $("#dominant-label").textContent = dom;
+    $("#dominant-score").textContent = `${(avg[dom] ?? 0).toFixed(1)}% (smoothed)`;
+  }
 }
 
 // ---- Boot -----------------------------------------------------------------

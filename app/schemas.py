@@ -6,6 +6,8 @@ shape the frontend and backend agree on.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -14,10 +16,14 @@ class AnalyzeRequest(BaseModel):
 
     ``image`` is a base64-encoded JPEG/PNG, optionally prefixed with a data URL
     header (``data:image/jpeg;base64,...``). The frontend sends the same shape
-    for both webcam frames and uploaded files.
+    for both webcam frames and uploaded files; ``mode`` selects the detector
+    backend tuned for that input (fast for webcam, accurate for upload).
     """
 
     image: str = Field(..., description="Base64 image data (data URL or raw base64).")
+    mode: Literal["upload", "webcam"] = Field(
+        default="upload", description="Input mode; selects the detector backend."
+    )
 
 
 class Box(BaseModel):
@@ -43,4 +49,5 @@ class AnalyzeResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     model_ready: bool
-    detector_backend: str
+    detector_webcam: str
+    detector_upload: str
