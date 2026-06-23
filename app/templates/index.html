@@ -3,81 +3,201 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FaceUp — Emotion Recognition</title>
+  <title>FaceUp — your face sets the vibe</title>
   <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 <body>
-  <header class="topbar">
-    <h1>Face<span>Up</span></h1>
-    <span id="server-status" class="pill pill--muted">connecting…</span>
-  </header>
-
-  <main class="layout">
-    <!-- Left: input + preview -->
-    <section class="panel">
-      <div class="tabs" role="tablist">
-        <button class="tab is-active" data-tab="upload" role="tab">Upload image</button>
-        <button class="tab" data-tab="webcam" role="tab">Webcam</button>
+  <div class="app">
+    <!-- ============ Sidebar ============ -->
+    <aside class="sidebar">
+      <div class="brand">🎭 Face<span>Up</span></div>
+      <nav class="nav">
+        <button class="nav-item is-active" data-nav="scan"><span>🎭</span> Mood scan</button>
+        <button class="nav-item" data-nav="vibe"><span>✨</span> My vibe</button>
+        <button class="nav-item" data-nav="focus"><span>⏱️</span> Focus</button>
+        <button class="nav-item" data-nav="stats"><span>📊</span> Stats</button>
+        <button class="nav-item" data-nav="collection"><span>❤️</span> Collection</button>
+        <button class="nav-item" data-nav="add"><span>⬆️</span> Add songs</button>
+        <button class="nav-item" data-nav="search"><span>🔍</span> Search</button>
+      </nav>
+      <div class="sidebar-foot">
+        <span id="server-status" class="pill pill--muted">connecting…</span>
       </div>
+    </aside>
 
-      <!-- Upload tab -->
-      <div class="tabpanel is-active" data-panel="upload">
-        <label id="dropzone" class="dropzone" for="file-input">
-          <input id="file-input" type="file" accept="image/*" hidden />
-          <span class="dropzone__icon">⬆</span>
-          <span class="dropzone__text">Click to choose an image<br /><small>or drag &amp; drop a photo here</small></span>
-        </label>
-      </div>
+    <!-- ============ Content ============ -->
+    <main class="content">
 
-      <!-- Webcam tab -->
-      <div class="tabpanel" data-panel="webcam">
-        <video id="webcam" playsinline muted hidden></video>
-        <div class="webcam-controls">
-          <button id="cam-toggle" class="btn btn--accent" type="button">Start camera</button>
-          <button id="cam-mirror" class="btn is-active" type="button">Mirror: on</button>
-          <span id="cam-status" class="muted">camera off</span>
+      <!-- ---- Mood scan ---- -->
+      <section class="view is-active" data-view="scan">
+        <header class="view-head">
+          <h1>Mood scan</h1>
+          <p class="muted">Show your face or upload a photo — FaceUp reads your mood, then sets your vibe.</p>
+        </header>
+
+        <div class="scan-grid">
+          <div class="card">
+            <div class="tabs" role="tablist">
+              <button class="tab is-active" data-tab="webcam" role="tab">Webcam</button>
+              <button class="tab" data-tab="upload" role="tab">Upload image</button>
+            </div>
+
+            <div class="tabpanel" data-panel="upload">
+              <label id="dropzone" class="dropzone" for="file-input">
+                <input id="file-input" type="file" accept="image/*" hidden />
+                <span class="dropzone__icon">⬆</span>
+                <span>Click to choose an image<br /><small class="muted">or drag &amp; drop a photo here</small></span>
+              </label>
+            </div>
+
+            <div class="tabpanel is-active" data-panel="webcam">
+              <video id="webcam" playsinline muted hidden></video>
+              <div class="row">
+                <button id="cam-toggle" class="btn btn--accent" type="button">Start camera</button>
+                <button id="cam-mirror" class="btn is-active" type="button">Mirror: on</button>
+                <span id="cam-status" class="muted">camera off</span>
+              </div>
+            </div>
+
+            <div id="stage" class="stage is-empty">
+              <canvas id="overlay"></canvas>
+              <div id="hud" class="hud" hidden>
+                <span id="hud-dot" class="hud__dot"></span>
+                <span id="hud-status">searching…</span>
+                <span id="hud-meta" class="hud__meta">— fps · — ms</span>
+              </div>
+              <p class="stage__hint muted">No image yet</p>
+            </div>
+          </div>
+
+          <aside class="card results">
+            <h2>Result</h2>
+            <div id="result-empty" class="muted">Analyse to see your mood.</div>
+            <div id="result-body" hidden>
+              <div class="dominant">
+                <span id="dominant-emoji" class="dominant__emoji">🙂</span>
+                <div>
+                  <div id="dominant-label" class="dominant__label">—</div>
+                  <div id="dominant-score" class="dominant__score">—</div>
+                </div>
+              </div>
+              <div id="bars" class="bars"></div>
+              <div class="meta">
+                <span id="face-count">0 faces</span>
+                <span id="infer-ms">— ms</span>
+              </div>
+              <button id="to-vibe" class="btn btn--accent btn--block" type="button" hidden>
+                Find my vibe →
+              </button>
+            </div>
+            <div id="result-error" class="error" hidden></div>
+          </aside>
         </div>
-        <p class="hint muted">Live detection runs ~5×/sec on your camera feed. Nothing is uploaded or stored — frames go only to the local server.</p>
-      </div>
+      </section>
 
-      <!-- Shared preview stage: image/video drawn here, boxes overlaid -->
-      <div id="stage" class="stage is-empty">
-        <canvas id="overlay"></canvas>
-        <div id="hud" class="hud" hidden>
-          <span id="hud-dot" class="hud__dot"></span>
-          <span id="hud-status">searching…</span>
-          <span id="hud-meta" class="hud__meta">— fps · — ms</span>
-        </div>
-        <p class="stage__hint">No image yet</p>
-      </div>
-    </section>
-
-    <!-- Right: results -->
-    <aside class="panel results" id="results">
-      <h2>Result</h2>
-      <div id="result-empty" class="muted">Analyse an image to see emotions.</div>
-
-      <div id="result-body" hidden>
-        <div class="dominant">
-          <span id="dominant-emoji" class="dominant__emoji">🙂</span>
-          <div>
-            <div id="dominant-label" class="dominant__label">—</div>
-            <div id="dominant-score" class="dominant__score">—</div>
+      <!-- ---- My vibe ---- -->
+      <section class="view" data-view="vibe">
+        <div id="vibe-hero" class="hero">
+          <div id="vibe-grad" class="hero__grad"></div>
+          <div class="hero__row">
+            <span class="pill pill--glass">Your vibe updated</span>
+            <button id="vibe-scan" class="btn btn--light" type="button">📷 Scan my face</button>
+          </div>
+          <div class="hero__title">
+            <div id="vibe-title">My vibe</div>
+            <div id="vibe-sub" class="hero__sub">Pick a mood, or scan your face</div>
+          </div>
+          <div class="hero__foot">
+            <div class="seg">
+              <button class="seg__opt" data-mode="match">Match</button>
+              <button class="seg__opt is-active" data-mode="lift">Lift</button>
+            </div>
           </div>
         </div>
 
-        <div id="bars" class="bars"></div>
-
-        <div class="meta">
-          <span id="face-count">0 faces</span>
-          <span id="infer-ms">— ms</span>
+        <h2 class="section-title">Tune to your mood</h2>
+        <div class="tiles">
+          <button class="tile" data-mood="happy"><span class="blob" style="background:#ffd24a"></span>Happy</button>
+          <button class="tile" data-mood="sad"><span class="blob" style="background:#5aa9ff"></span>Sad</button>
+          <button class="tile" data-mood="angry"><span class="blob" style="background:#ff5c5c"></span>Angry</button>
+          <button class="tile" data-mood="surprised"><span class="blob" style="background:#ff9f43"></span>Surprised</button>
+          <button class="tile" data-mood="neutral"><span class="blob" style="background:#9aa0a6"></span>Neutral</button>
         </div>
+
+        <h2 class="section-title">Recommended for you</h2>
+        <div id="reco-list" class="reco">
+          <p class="muted">Pick a mood above to load recommendations. <span class="tag">live music arrives in the next step</span></p>
+        </div>
+      </section>
+
+      <!-- ---- Focus ---- -->
+      <section class="view" data-view="focus">
+        <header class="view-head"><h1>Focus</h1><p class="muted">A timer and a calm station to get into deep work.</p></header>
+        <div class="focus-grid">
+          <div class="card focus-timer">
+            <div id="focus-ring" class="ring"><span id="focus-time">25:00</span></div>
+            <div class="row focus-presets">
+              <button class="btn preset is-active" data-min="25">25 min</button>
+              <button class="btn preset" data-min="50">50 min</button>
+              <button class="btn preset" data-min="5">5 min</button>
+            </div>
+            <div class="row">
+              <button id="focus-toggle" class="btn btn--accent" type="button">Start focus</button>
+              <button id="focus-reset" class="btn" type="button">Reset</button>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Focus station</h2>
+            <p class="muted">Instrumental / lo-fi for concentration. <span class="tag">music arrives with P2</span></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---- Stubs (built in later phases) ---- -->
+      <section class="view" data-view="stats">
+        <header class="view-head"><h1>Stats</h1><p class="muted">Focus minutes, sessions, streaks, and your mood history.</p></header>
+        <div class="placeholder">📊 Progress statistics arrive with the SQLite backend (P6).</div>
+      </section>
+      <section class="view" data-view="collection">
+        <header class="view-head"><h1>Collection</h1><p class="muted">Tracks you've liked.</p></header>
+        <div class="placeholder">❤️ Your liked tracks will live here.</div>
+      </section>
+      <section class="view" data-view="add">
+        <header class="view-head"><h1>Add songs</h1><p class="muted">Upload your own tracks and tag them by mood.</p></header>
+        <div class="placeholder">⬆️ Uploads + mood tagging arrive with P3 (stored in SQLite).</div>
+      </section>
+      <section class="view" data-view="search">
+        <header class="view-head"><h1>Search</h1><p class="muted">Find tracks and stations.</p></header>
+        <div class="placeholder">🔍 Search arrives once the music backend is wired up.</div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ============ Persistent player ============ -->
+  <footer class="player" id="player">
+    <div class="player__now">
+      <div id="player-cover" class="player__cover">🎵</div>
+      <div>
+        <div id="player-title" class="player__title">Nothing playing</div>
+        <div id="player-artist" class="player__artist muted">Pick a vibe to start</div>
       </div>
+      <button class="iconbtn" aria-label="Like" title="Like">🤍</button>
+    </div>
+    <div class="player__controls">
+      <div class="player__buttons">
+        <button class="iconbtn" aria-label="Previous">⏮</button>
+        <button id="player-play" class="iconbtn iconbtn--play" aria-label="Play">▶</button>
+        <button class="iconbtn" aria-label="Next">⏭</button>
+      </div>
+      <div class="player__bar"><span id="player-progress" class="player__fill"></span></div>
+    </div>
+    <div class="player__vol">
+      <span>🔊</span>
+      <input id="player-volume" type="range" min="0" max="100" value="80" aria-label="Volume" />
+    </div>
+  </footer>
 
-      <div id="result-error" class="error" hidden></div>
-    </aside>
-  </main>
-
-  <script src="/static/js/app.js"></script>
+  <script type="module" src="/static/js/main.js"></script>
 </body>
 </html>

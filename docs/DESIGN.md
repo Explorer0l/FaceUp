@@ -98,6 +98,25 @@ Empty `faces` = no face detected (handled gracefully, not an error).
 - [ ] **M6** Report + slides + screenshots
 - [ ] **M7** Hardening, error states, README
 
+### Phase 2 — emotion-driven music + focus (pivot 2026-06-24)
+
+The product expands: the emotion engine becomes the *input* to a music
+recommender. Stack additions — Jamendo API + user uploads, Match/Lift toggle,
+SQLite (SQLModel) for stats, Yandex-Music-style UI whose hero gradient is tinted
+by the current emotion.
+
+- [x] **P1** New UI shell — sidebar nav, vibe hero (emotion-tinted), persistent
+  player, ES-module frontend (`main/router/moodScan/vibe/focus/player/bus/api/
+  emotions`). Mood scan migrated intact; Vibe tiles + Match/Lift + Focus timer
+  working; recos are samples (P2). Stats/Collection/Add/Search are stubs.
+- [ ] **P2** Music backend — Jamendo client + recommendation service (emotion →
+  mood tags, Match/Lift); persistent player plays real tracks.
+- [ ] **P3** User uploads — upload audio, tag by mood, store in SQLite; joins pool.
+- [ ] **P4** Mood→vibe flow — "scan my face" → recommend, plus manual tiles.
+- [ ] **P5** Focus station music + auto-pause options.
+- [ ] **P6** Stats — SQLite session/mood logging + charts.
+- [ ] **P7** Polish + report/slides.
+
 ## 7. Open questions / future
 
 - Detector backend is chosen **per mode**: `ssd` for webcam (~34 ms/frame,
