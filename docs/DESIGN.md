@@ -7,8 +7,13 @@
 
 A web app for **facial emotion recognition**. A user shows their face (live
 webcam) or uploads a photo; the app detects the face(s) and classifies the
-expression into one of seven emotions: `angry, disgust, fear, happy, sad,
-surprise, neutral`.
+expression into one of five clear emotions: `happy, sad, angry, surprised,
+neutral`.
+
+DeepFace computes 7 raw classes; we **group** them server-side
+(`angry ← angry + disgust`, `surprised ← surprise + fear`) to cut the confusion
+between visually-similar expressions and give a clearer, more reliable reading.
+See `app/config.py::EMOTION_GROUPS`.
 
 Deliverables: the demo web app, a written report, and presentation slides.
 
@@ -62,8 +67,8 @@ one backend code path, fewer bugs.
   "faces": [
     { "box": {"x":34,"y":50,"w":120,"h":120},
       "dominant": "happy",
-      "scores": {"angry":0.1,"disgust":0.0,"fear":0.2,
-                 "happy":92.1,"sad":2.1,"surprise":1.3,"neutral":4.2} }
+      "scores": {"happy":92.1,"sad":2.1,"angry":0.1,
+                 "surprised":1.5,"neutral":4.2} }
   ],
   "infer_ms": 142
 }
@@ -89,7 +94,7 @@ Empty `faces` = no face detected (handled gracefully, not an error).
 - [x] **M2** `emotion.py` service + warm-up + unit tests (verified: warmup loads model, `/health` reports ready)
 - [x] **M3** Upload path end-to-end (UI + drag/drop + box overlay + confidence bars; HTTP path verified, 422 on bad input)
 - [x] **M4** Webcam real-time path + canvas overlay (decoupled display/inference loops, single in-flight guard, camera lifecycle)
-- [ ] **M5** UI polish (confidence bars, labels)
+- [x] **M5** UI polish — webcam UX (mirror/selfie view with flipped boxes, live FPS/latency + face-found HUD). Reduced to a 5-emotion grouped set for clarity. (An earlier session-timeline was added then removed per feedback — a single clear current reading is preferred.)
 - [ ] **M6** Report + slides + screenshots
 - [ ] **M7** Hardening, error states, README
 
@@ -99,3 +104,5 @@ Empty `faces` = no face detected (handled gracefully, not an error).
   for higher-accuracy upload analysis if time allows.
 - Multi-face handling is supported by the schema (a list); UI currently
   designed around the largest/first face.
+- Webcam now defaults to a mirrored (selfie) view; box coordinates are flipped
+  to stay aligned. Toggle in the Webcam tab.

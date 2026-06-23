@@ -38,13 +38,19 @@ class Settings:
 
 settings = Settings()
 
-# All emotion classes DeepFace can return, in a stable display order.
-EMOTION_LABELS = (
-    "angry",
-    "disgust",
-    "fear",
-    "happy",
-    "sad",
-    "surprise",
-    "neutral",
-)
+# We collapse DeepFace's 7 raw classes into a smaller, clearer set. DeepFace
+# routinely confuses visually-similar expressions, so we *sum* the probabilities
+# of grouped classes rather than dropping any signal:
+#   angry      <- angry + disgust
+#   surprised  <- surprise + fear
+# happy / sad / neutral pass through unchanged. Keys define the display order.
+EMOTION_GROUPS = {
+    "happy": ("happy",),
+    "sad": ("sad",),
+    "angry": ("angry", "disgust"),
+    "surprised": ("surprise", "fear"),
+    "neutral": ("neutral",),
+}
+
+# The reduced set the app exposes, in a stable display order.
+EMOTION_LABELS = tuple(EMOTION_GROUPS.keys())
