@@ -8,6 +8,10 @@ figure for the report.
 
 from __future__ import annotations
 
+import os
+
+os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")  # match the app's Keras dialect
+
 import argparse
 
 import numpy as np

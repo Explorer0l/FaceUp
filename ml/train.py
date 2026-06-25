@@ -12,6 +12,13 @@ model, lower-level, to demonstrate what ``.fit`` does under the hood.
 
 from __future__ import annotations
 
+import os
+
+# Train under the same Keras dialect the app uses (legacy Keras 2 / tf-keras),
+# so the saved .keras model loads in the app where DeepFace forces legacy Keras.
+# Must be set before TensorFlow is imported.
+os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
+
 import argparse
 import json
 
