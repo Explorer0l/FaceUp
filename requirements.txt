@@ -13,5 +13,9 @@ opencv-python==4.10.0.84
 numpy==1.26.4
 pillow==11.1.0
 
+# ML training pipeline (Phase 3)
+scikit-learn==1.6.1     # train/test split, metrics, confusion matrix, KMeans/PCA
+matplotlib==3.10.0      # training curves + confusion-matrix figures for the report
+
 # Dev / tests
 pytest==8.3.4

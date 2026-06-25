@@ -19,3 +19,7 @@ Thumbs.db
 
 # Runtime logs
 *.log
+
+# Datasets (large) and generated training artifacts
+/data/
+ml/artifacts/
