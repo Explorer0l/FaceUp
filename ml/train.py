@@ -56,12 +56,21 @@ def train_keras(model, d, args) -> dict:
         tf.keras.callbacks.EarlyStopping(patience=6, restore_best_weights=True),
         tf.keras.callbacks.ReduceLROnPlateau(patience=3, factor=0.5),
     ]
+    fit_kwargs = {}
+    if args.class_weight:
+        # WARNING: inverse-frequency class weights destabilise the BatchNorm CNN —
+        # the weighted loss collapses it to uniform output (train+val loss stuck at
+        # ln(NUM_CLASSES), accuracy at chance). The linear softmax model has no
+        # BatchNorm and is unaffected. FER2013 remapped to 5 classes is only mildly
+        # imbalanced (15-25%), so we train unweighted by default; opt in for
+        # experiments with --class-weight. (Topic 7: class-imbalance handling.)
+        fit_kwargs["class_weight"] = class_weights(d["y_train"])
     hist = model.fit(
         d["x_train"], d["y_train_oh"],
         validation_data=(d["x_val"], d["y_val_oh"]),
         epochs=args.epochs, batch_size=args.batch,
-        class_weight=class_weights(d["y_train"]),
         callbacks=callbacks, verbose=2,
+        **fit_kwargs,
     )
     return hist.history
 
@@ -109,6 +118,11 @@ def main() -> None:
     ap.add_argument("--epochs", type=int, default=config.EPOCHS)
     ap.add_argument("--batch", type=int, default=config.BATCH_SIZE)
     ap.add_argument("--lr", type=float, default=config.LEARNING_RATE)
+    ap.add_argument(
+        "--class-weight", action="store_true",
+        help="Apply inverse-frequency class weights. NOTE: collapses the BatchNorm "
+             "CNN to chance; safe for the softmax model. Off by default.",
+    )
     args = ap.parse_args()
 
     tf.random.set_seed(config.SEED)
