@@ -54,19 +54,32 @@ def _load_folder(root: Path, split: str) -> tuple[np.ndarray, np.ndarray]:
 
 
 def load_raw() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Return (train_x, train_y, test_x, test_y) as uint8 images + FER labels."""
+    """Return (train_x, train_y, test_x, test_y) as uint8 images + FER labels.
+
+    Decoding 35k image files is slow, so the first call caches the arrays to a
+    compressed ``.npz`` (Topic 6: efficient contiguous NumPy storage) and later
+    calls load that instead — seconds instead of minutes.
+    """
     root = config.DATA_ROOT
+    cache = (root if root.is_dir() else root.parent) / "_fer_cache.npz"
+    if cache.is_file():
+        z = np.load(cache)
+        return z["tx"], z["ty"], z["ex"], z["ey"]
+
     csv_candidate = root if root.suffix == ".csv" else root / "fer2013.csv"
     if csv_candidate.is_file():
-        return _load_csv(csv_candidate)
-    if (root / "train").is_dir():
+        tx, ty, ex, ey = _load_csv(csv_candidate)
+    elif (root / "train").is_dir():
         tx, ty = _load_folder(root, "train")
         ex, ey = _load_folder(root, "test")
-        return tx, ty, ex, ey
-    raise FileNotFoundError(
-        f"No dataset at {root}. Provide fer2013.csv or train/ & test/ image folders. "
-        "See ml/README.md."
-    )
+    else:
+        raise FileNotFoundError(
+            f"No dataset at {root}. Provide fer2013.csv or train/ & test/ image "
+            "folders. See ml/README.md."
+        )
+
+    np.savez_compressed(cache, tx=tx, ty=ty, ex=ex, ey=ey)
+    return tx, ty, ex, ey
 
 
 def build_datasets() -> dict[str, np.ndarray]:

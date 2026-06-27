@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv_wsl/
 *.egg-info/
 
 # DeepFace downloads its model weights here on first run

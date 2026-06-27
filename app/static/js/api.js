@@ -4,12 +4,16 @@ export async function getHealth() {
   return (await fetch("/health")).json();
 }
 
-/** POST a data-URL/base64 image. `mode` selects the detector backend. */
-export async function analyzeDataURL(dataURL, mode = "upload") {
+export async function getModels() {
+  return (await fetch("/api/models")).json();
+}
+
+/** POST a data-URL/base64 image. `mode` picks the detector; `model` the engine. */
+export async function analyzeDataURL(dataURL, mode = "upload", model = "deepface") {
   const res = await fetch("/api/analyze", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ image: dataURL, mode }),
+    body: JSON.stringify({ image: dataURL, mode, model }),
   });
   if (!res.ok) {
     const detail = await res.json().catch(() => ({}));

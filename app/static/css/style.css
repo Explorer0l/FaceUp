@@ -99,6 +99,15 @@ body {
 .scan-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; }
 @media (max-width: 900px) { .scan-grid { grid-template-columns: 1fr; } }
 
+.model-row { margin-bottom: 12px; }
+.model-row label { font-size: 0.85rem; }
+#model-picker {
+  flex: 1; min-width: 0; padding: 0.5rem 0.7rem; border-radius: 10px;
+  background: var(--panel-2); color: var(--fg); border: 1px solid var(--border);
+  font-size: 0.9rem; cursor: pointer;
+}
+#model-picker:hover { border-color: var(--accent); }
+
 .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
 .tab {
   flex: 1; padding: 0.55rem; background: var(--panel-2); color: var(--muted);

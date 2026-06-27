@@ -14,7 +14,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 
 from app.config import settings
-from app.schemas import AnalyzeRequest, AnalyzeResponse, HealthResponse
+from app.schemas import AnalyzeRequest, AnalyzeResponse, HealthResponse, ModelsResponse
 from app.services import emotion
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -47,6 +47,11 @@ async def health() -> HealthResponse:
     )
 
 
+@app.get("/api/models", response_model=ModelsResponse)
+async def models() -> ModelsResponse:
+    return ModelsResponse(models=emotion.available_models(), default="deepface")
+
+
 @app.post("/api/analyze", response_model=AnalyzeResponse)
 async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     try:
@@ -54,10 +59,9 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     except emotion.ImageDecodeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    # Fast detector for live webcam, accurate detector for one-shot uploads.
-    backend = (
-        settings.detector_webcam if req.mode == "webcam" else settings.detector_upload
+    # Inference is CPU-bound and blocking — keep it off the event loop. The chosen
+    # engine handles its own face detection (per-mode for DeepFace).
+    faces, infer_ms = await run_in_threadpool(
+        emotion.analyze_frame, frame, req.model, req.mode
     )
-    # DeepFace inference is CPU-bound and blocking — keep it off the event loop.
-    faces, infer_ms = await run_in_threadpool(emotion.analyze_frame, frame, backend)
     return AnalyzeResponse(faces=faces, infer_ms=infer_ms)
