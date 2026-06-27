@@ -36,23 +36,21 @@ def test_decode_rejects_garbage():
         emotion.decode_base64_image("not-base64!!")
 
 
-def test_to_face_results_skips_non_detections():
-    raw = [{"face_confidence": 0, "region": {}, "emotion": {}}]
-    assert emotion._to_face_results(raw) == []
+def test_group_scores_folds_7_into_5():
+    from app.services.engines.deepface_engine import group_scores
+
+    scores = group_scores(
+        {"angry": 20.0, "disgust": 10.0, "fear": 5.0, "happy": 8.0,
+         "sad": 2.0, "surprise": 15.0, "neutral": 40.0}
+    )
+    assert scores == {"happy": 8.0, "sad": 2.0, "angry": 30.0,
+                      "surprised": 20.0, "neutral": 40.0}  # disgust→angry, fear→surprised
+    assert max(scores, key=scores.get) == "neutral"
 
 
-def test_to_face_results_maps_scores():
-    raw = [
-        {
-            "face_confidence": 0.99,
-            "region": {"x": 1, "y": 2, "w": 3, "h": 4},
-            "dominant_emotion": "happy",
-            "emotion": {"happy": 90.0, "sad": 10.0},
-        }
-    ]
-    results = emotion._to_face_results(raw)
-    assert len(results) == 1
-    assert results[0].dominant == "happy"
-    assert results[0].box.w == 3
-    assert results[0].scores["happy"] == 90.0
-    assert results[0].scores["neutral"] == 0.0  # missing labels default to 0
+def test_make_face_result_builds_and_skips():
+    from app.services.engines.base import make_face_result
+
+    fr = make_face_result(1, 2, 3, 4, {"happy": 90.0, "sad": 10.0})
+    assert fr is not None and fr.dominant == "happy" and fr.box.w == 3
+    assert make_face_result(0, 0, 0, 0, {}) is None  # no scores → no face

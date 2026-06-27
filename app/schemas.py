@@ -24,6 +24,9 @@ class AnalyzeRequest(BaseModel):
     mode: Literal["upload", "webcam"] = Field(
         default="upload", description="Input mode; selects the detector backend."
     )
+    model: str = Field(
+        default="deepface", description="Which emotion engine to use (see /api/models)."
+    )
 
 
 class Box(BaseModel):
@@ -51,3 +54,13 @@ class HealthResponse(BaseModel):
     model_ready: bool
     detector_webcam: str
     detector_upload: str
+
+
+class ModelInfo(BaseModel):
+    id: str
+    label: str
+
+
+class ModelsResponse(BaseModel):
+    models: list[ModelInfo]
+    default: str
