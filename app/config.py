@@ -9,6 +9,16 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+# Load a local .env (gitignored) so secrets like the Audius key don't have to be
+# exported into the shell each run. No-op if python-dotenv isn't installed or the
+# file is absent — real shell env vars still win.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:  # pragma: no cover - dotenv is optional
+    pass
+
 
 def _env(name: str, default: str) -> str:
     return os.environ.get(f"FACEUP_{name}", default)
@@ -40,6 +50,18 @@ class Settings:
 
     # Max accepted image payload (base64) in bytes — guards against huge frames.
     max_image_bytes: int = int(_env("MAX_IMAGE_BYTES", str(8 * 1024 * 1024)))
+
+    # --- Music (Audius, P2) --------------------------------------------------
+    # Audius's read API authenticates with just an app_name; the API key is kept
+    # for rate limits / future SDK use. See ml docs / DESIGN.md.
+    audius_app_name: str = _env("AUDIUS_APP_NAME", "FaceUp")
+    audius_api_key: str = _env("AUDIUS_API_KEY", "")
+    # Discovery endpoint that returns healthy Audius API hosts to query.
+    audius_discovery: str = _env("AUDIUS_DISCOVERY", "https://api.audius.co")
+    # How many tracks a recommendation returns.
+    reco_limit: int = int(_env("RECO_LIMIT", "20"))
+    # Per-request network timeout (seconds) for Audius calls.
+    audius_timeout: float = float(_env("AUDIUS_TIMEOUT", "8"))
 
 
 settings = Settings()

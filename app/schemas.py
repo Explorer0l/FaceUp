@@ -64,3 +64,29 @@ class ModelInfo(BaseModel):
 class ModelsResponse(BaseModel):
     models: list[ModelInfo]
     default: str
+
+
+class Track(BaseModel):
+    """One playable track, normalized across sources (Audius / local fallback)."""
+
+    id: str
+    title: str
+    artist: str
+    mood: str = Field("", description="Source mood tag, if any (e.g. 'Upbeat').")
+    genre: str = ""
+    duration: int = Field(0, description="Length in seconds (0 if unknown).")
+    stream_url: str = Field(..., description="URL an <audio> element can play.")
+    cover_url: str = ""
+    source: Literal["audius", "local"] = "audius"
+
+
+class RecommendResponse(BaseModel):
+    emotion: str = Field(..., description="The detected/selected emotion.")
+    mode: Literal["match", "lift"] = Field(..., description="Mirror vs regulate mood.")
+    moods: list[str] = Field(
+        default_factory=list, description="Audius mood tags this maps to."
+    )
+    tracks: list[Track] = Field(default_factory=list)
+    source: Literal["audius", "local"] = Field(
+        "audius", description="Where the tracks came from (local = offline fallback)."
+    )
