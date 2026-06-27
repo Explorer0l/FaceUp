@@ -38,6 +38,21 @@ _MOOD_MAP: dict[str, dict[str, list[str]]] = {
 # Used when the emotion isn't one of our five (defensive).
 DEFAULT_MOODS = ["Easygoing", "Cool"]
 
+# Where "Lift" moves each emotion toward (the regulated target emotion). Used to
+# decide which user-uploaded tracks surface for a given emotion + mode (P3).
+_LIFT_TARGET = {
+    "happy": "happy",
+    "sad": "happy",
+    "angry": "neutral",
+    "surprised": "neutral",
+    "neutral": "happy",
+}
+
+
+def lift_target(emotion: str) -> str:
+    """The emotion 'Lift' steers toward, e.g. sad -> happy, angry -> neutral."""
+    return _LIFT_TARGET.get((emotion or "").lower(), "happy")
+
 
 def moods_for(emotion: str, mode: str) -> list[str]:
     """Audius mood tags for an emotion + mode ('match' | 'lift')."""

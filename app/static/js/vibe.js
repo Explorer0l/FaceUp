@@ -101,6 +101,11 @@ export function initVibe() {
     if (view === "vibe" && !tracks.length) loadRecos();
   });
 
+  // A new/removed upload can change recommendations — refresh if we're showing some.
+  on("uploadschanged", () => {
+    if (tracks.length) loadRecos();
+  });
+
   // Highlight the track the player is currently on.
   on("nowplaying", ({ index }) => {
     document.querySelectorAll(".rc").forEach((el) =>
