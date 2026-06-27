@@ -215,6 +215,34 @@ body {
 .rc.is-playing .rc__title { color: var(--accent); }
 .rc.is-playing .rc__play { opacity: 1; transform: translateY(0); }
 
+/* ---------- Add songs (P3) ---------- */
+.add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .add-grid { grid-template-columns: 1fr; } }
+#upload-form h2, .add-grid .card h2 { margin-top: 0; font-size: 1.05rem; }
+.field { margin-top: 12px; display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 0.82rem; }
+.field input {
+  padding: 0.55rem 0.7rem; border-radius: 10px; background: var(--panel-2);
+  color: var(--fg); border: 1px solid var(--border); font-size: 0.9rem;
+}
+.field input:focus { outline: none; border-color: var(--accent); }
+.mood-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.moodbtn {
+  padding: 0.45rem 0.8rem; border-radius: 999px; background: var(--panel-2);
+  color: var(--muted); border: 1px solid var(--border); cursor: pointer; font-size: 0.85rem;
+}
+.moodbtn:hover { color: var(--fg); border-color: var(--accent); }
+.moodbtn.is-active { background: var(--accent); border-color: var(--accent); color: #15171c; font-weight: 600; }
+.upload-msg { margin-top: 10px; font-size: 0.85rem; }
+.upload-list { display: flex; flex-direction: column; gap: 6px; }
+.ut { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--panel-2); border-radius: 10px; }
+.ut__emoji { font-size: 1.3rem; }
+.ut__meta { min-width: 0; flex: 1; }
+.ut__title { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ut__artist { font-size: 0.78rem; }
+.ut__play, .ut__del { font-size: 1rem; }
+.ut__del:hover { color: #ff5c5c; }
+
 /* ---------- Focus ---------- */
 .focus-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 900px) { .focus-grid { grid-template-columns: 1fr; } }
