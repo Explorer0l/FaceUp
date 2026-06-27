@@ -130,8 +130,10 @@ network. Demonstrates NumPy/tensors (T6), preprocessing + softmax regression
 - [ ] **ML-2** Obtain FER2013 + train softmax baseline & custom CNN; record
   accuracy/confusion matrix.
 - [ ] **ML-3** Transfer-learning model (MobileNetV2) for comparison.
-- [ ] **ML-4** Inference engine registry in the app + `GET /api/models` +
-  `POST /api/analyze?model=…`; frontend model picker (delivers "choose the NN").
+- [x] **ML-4** Inference engine registry (`app/services/engines/`): DeepFace +
+  Keras engines behind one `predict()` contract; `GET /api/models`, `model` field
+  on `/api/analyze`, frontend model picker. Trained engines auto-appear once
+  weights exist in `ml/artifacts/`. Verified incl. KerasEngine load + fallback.
 
 ## 7. Open questions / future
 
