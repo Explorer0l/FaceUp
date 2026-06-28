@@ -5,6 +5,7 @@ import { initMoodScan } from "./moodScan.js";
 import { initVibe } from "./vibe.js";
 import { initFocus } from "./focus.js";
 import { initPlayer } from "./player.js";
+import { initAdd } from "./add.js";
 
 async function checkHealth() {
   const el = document.querySelector("#server-status");
@@ -29,4 +30,5 @@ initMoodScan();
 initVibe();
 initFocus();
 initPlayer();
+initAdd();
 checkHealth();
