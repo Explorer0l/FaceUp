@@ -73,6 +73,8 @@ class Settings:
     uploads_dir: str = _env("UPLOADS_DIR", str(_PROJECT_ROOT / "data" / "uploads"))
     # Max accepted upload size (bytes) — guards disk against huge files.
     max_upload_bytes: int = int(_env("MAX_UPLOAD_BYTES", str(20 * 1024 * 1024)))
+    # Max accepted cover-image size (bytes) for a custom track cover.
+    max_cover_bytes: int = int(_env("MAX_COVER_BYTES", str(5 * 1024 * 1024)))
 
 
 settings = Settings()

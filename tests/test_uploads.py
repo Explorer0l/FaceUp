@@ -77,6 +77,40 @@ def test_to_track_shape():
     assert t["stream_url"] == "/uploads/x.mp3"
     assert t["mood"] == "angry"
     assert t["source"] == "local"
+    assert t["cover_url"] == ""  # no custom cover
+
+
+def test_save_with_cover_writes_and_links(session):
+    row = uploads.save_upload(
+        session, data=b"audio", original_name="a.mp3",
+        title="A", artist="", emotion="happy",
+        cover_data=b"\x89PNG fake", cover_name="art.png",
+    )
+    assert row.cover_filename and row.cover_filename.endswith(".png")
+    assert (uploads._covers_path() / row.cover_filename).is_file()
+    assert uploads.to_track(row)["cover_url"] == f"/uploads/covers/{row.cover_filename}"
+
+
+def test_save_rejects_unsupported_cover_type(session):
+    with pytest.raises(uploads.UploadError):
+        uploads.save_upload(
+            session, data=b"audio", original_name="a.mp3",
+            title="A", artist="", emotion="happy",
+            cover_data=b"x", cover_name="art.bmp",
+        )
+
+
+def test_delete_removes_cover_too(session):
+    row = uploads.save_upload(
+        session, data=b"audio", original_name="a.mp3",
+        title="A", artist="", emotion="happy",
+        cover_data=b"img", cover_name="c.jpg",
+    )
+    audio_f = uploads._uploads_path() / row.filename
+    cover_f = uploads._covers_path() / row.cover_filename
+    assert audio_f.is_file() and cover_f.is_file()
+    assert uploads.delete_upload(session, row.id) is True
+    assert not audio_f.is_file() and not cover_f.is_file()
 
 
 def test_uploads_for_emotion_surfaces_under_tag(session, monkeypatch):
