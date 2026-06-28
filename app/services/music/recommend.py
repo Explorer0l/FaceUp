@@ -1,0 +1,58 @@
+"""Recommendation service: emotion -> moods -> tracks (Audius, local fallback).
+
+Pulls a share of tracks from each mapped mood so the mix reflects the whole
+mapping, dedupes, shuffles, and caps at the requested limit. If Audius yields
+nothing (offline), falls back to the bundled local library.
+"""
+
+from __future__ import annotations
+
+import math
+import random
+
+from app.config import settings
+from app.services.music import audius, fallback, uploads
+from app.services.music.moods import moods_for
+
+
+def recommend(emotion: str, mode: str, limit: int | None = None) -> dict:
+    limit = limit or settings.reco_limit
+    mode = "lift" if (mode or "").lower() == "lift" else "match"
+    emotion = (emotion or "").lower()
+    moods = moods_for(emotion, mode)
+
+    # The user's own uploads tagged with this emotion go first (own content,
+    # demo-friendly) — surfaced in both Match and Lift so a tagged track always
+    # appears in its emotion's album.
+    try:
+        user_tracks = uploads.uploads_for_emotion(emotion)
+    except Exception:  # noqa: BLE001 - a DB hiccup shouldn't break recommendations
+        user_tracks = []
+
+    per_mood = max(3, math.ceil(limit / max(1, len(moods))))
+    audius_tracks: list[dict] = []
+    seen: set[str] = set()
+    for mood in moods:
+        try:
+            raws = audius.search_by_mood(mood, per_mood * 2)
+        except audius.AudiusError:
+            continue  # one bad mood shouldn't sink the whole request
+        for raw in raws:
+            t = audius.normalize(raw)
+            if t and t["id"] not in seen:
+                seen.add(t["id"])
+                audius_tracks.append(t)
+
+    source = "audius" if audius_tracks else "local"
+    if not audius_tracks and not user_tracks:  # nothing online -> offline safety net
+        audius_tracks = fallback.tracks_for(moods, limit)
+
+    random.shuffle(audius_tracks)
+    tracks = user_tracks + audius_tracks  # uploads pinned to the top
+    return {
+        "emotion": emotion,
+        "mode": mode,
+        "moods": moods,
+        "tracks": tracks[:limit],
+        "source": source,
+    }

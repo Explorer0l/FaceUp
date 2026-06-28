@@ -2,10 +2,12 @@
 // milestones, modularised. It emits "emotion" on the bus whenever it has a
 // confident reading, so the Vibe view can react.
 import { EMOTIONS, EMOTION_ORDER } from "./emotions.js";
-import { analyzeDataURL } from "./api.js";
+import { analyzeDataURL, getModels } from "./api.js";
 import { emit, on } from "./bus.js";
 
 const $ = (s) => document.querySelector(s);
+
+let selectedModel = "deepface";
 
 let overlay, ctx, stage, video, captureCanvas, captureCtx;
 
@@ -141,7 +143,7 @@ function loadFile(file) {
     drawOverlay(img, img.naturalWidth, img.naturalHeight, []);
     try {
       const dataURL = overlay.toDataURL("image/jpeg", 0.92);
-      const data = await analyzeDataURL(dataURL, "upload");
+      const data = await analyzeDataURL(dataURL, "upload", selectedModel);
       drawOverlay(img, img.naturalWidth, img.naturalHeight, data.faces || []);
       renderResults(data);
     } catch (e) {
@@ -175,7 +177,7 @@ async function inferLoop() {
     captureCanvas.height = video.videoHeight;
     captureCtx.drawImage(video, 0, 0);
     const dataURL = captureCanvas.toDataURL("image/jpeg", 0.7);
-    const data = await analyzeDataURL(dataURL, "webcam");
+    const data = await analyzeDataURL(dataURL, "webcam", selectedModel);
     trackFps();
     lastMs = data.infer_ms;
     handleWebcamResult(data);
@@ -367,6 +369,22 @@ export function initMoodScan() {
     mt.classList.toggle("is-active", mirror);
     mt.textContent = mirror ? "Mirror: on" : "Mirror: off";
   });
+
+  // Neural-network picker — populated from /api/models (DeepFace always there;
+  // our trained models appear once their weights exist in ml/artifacts/).
+  const picker = $("#model-picker");
+  getModels()
+    .then(({ models, default: def }) => {
+      selectedModel = def || "deepface";
+      picker.innerHTML = models
+        .map((m) => `<option value="${m.id}">${m.label}</option>`)
+        .join("");
+      picker.value = selectedModel;
+    })
+    .catch(() => {
+      picker.innerHTML = '<option value="deepface">DeepFace (pretrained)</option>';
+    });
+  picker.addEventListener("change", () => { selectedModel = picker.value; });
 
   // "Find my vibe →" navigates to the Vibe view.
   $("#to-vibe").addEventListener("click", () => emit("navigate", "vibe"));

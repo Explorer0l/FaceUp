@@ -4,6 +4,9 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 python-multipart==0.0.20
 jinja2==3.1.5
+python-dotenv==1.0.1     # load .env (Audius key) without exporting shell vars
+requests==2.32.3         # Audius API client (P2); also a DeepFace dependency
+sqlmodel==0.0.22         # SQLite ORM for uploads (P3) + later stats (P6)
 
 # ML / vision
 deepface==0.0.93
@@ -12,6 +15,10 @@ tensorflow==2.18.0
 opencv-python==4.10.0.84
 numpy==1.26.4
 pillow==11.1.0
+
+# ML training pipeline (Phase 3)
+scikit-learn==1.6.1     # train/test split, metrics, confusion matrix, KMeans/PCA
+matplotlib==3.10.0      # training curves + confusion-matrix figures for the report
 
 # Dev / tests
 pytest==8.3.4

@@ -8,6 +8,19 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Load a local .env (gitignored) so secrets like the Audius key don't have to be
+# exported into the shell each run. No-op if python-dotenv isn't installed or the
+# file is absent — real shell env vars still win.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:  # pragma: no cover - dotenv is optional
+    pass
 
 
 def _env(name: str, default: str) -> str:
@@ -41,20 +54,44 @@ class Settings:
     # Max accepted image payload (base64) in bytes — guards against huge frames.
     max_image_bytes: int = int(_env("MAX_IMAGE_BYTES", str(8 * 1024 * 1024)))
 
+    # --- Music (Audius, P2) --------------------------------------------------
+    # Audius's read API authenticates with just an app_name; the API key is kept
+    # for rate limits / future SDK use. See ml docs / DESIGN.md.
+    audius_app_name: str = _env("AUDIUS_APP_NAME", "FaceUp")
+    audius_api_key: str = _env("AUDIUS_API_KEY", "")
+    # Discovery endpoint that returns healthy Audius API hosts to query.
+    audius_discovery: str = _env("AUDIUS_DISCOVERY", "https://api.audius.co")
+    # How many tracks a recommendation returns.
+    reco_limit: int = int(_env("RECO_LIMIT", "20"))
+    # Per-request network timeout (seconds) for Audius calls.
+    audius_timeout: float = float(_env("AUDIUS_TIMEOUT", "8"))
+
+    # --- Persistence / uploads (P3) ------------------------------------------
+    # SQLite database + uploaded-audio directory. Both live under data/ (which is
+    # gitignored) by default.
+    db_path: str = _env("DB_PATH", str(_PROJECT_ROOT / "data" / "faceup.db"))
+    uploads_dir: str = _env("UPLOADS_DIR", str(_PROJECT_ROOT / "data" / "uploads"))
+    # Max accepted upload size (bytes) — guards disk against huge files.
+    max_upload_bytes: int = int(_env("MAX_UPLOAD_BYTES", str(20 * 1024 * 1024)))
+    # Max accepted cover-image size (bytes) for a custom track cover.
+    max_cover_bytes: int = int(_env("MAX_COVER_BYTES", str(5 * 1024 * 1024)))
+
 
 settings = Settings()
 
 # We collapse DeepFace's 7 raw classes into a smaller, clearer set. DeepFace
 # routinely confuses visually-similar expressions, so we *sum* the probabilities
 # of grouped classes rather than dropping any signal:
-#   angry      <- angry + disgust
-#   surprised  <- surprise + fear
+#   angry  <- angry + disgust
 # happy / sad / neutral pass through unchanged. Keys define the display order.
+#
+# We intentionally expose only these four emotions: DeepFace's "surprise" and
+# "fear" are its least reliable classes and were hurting detection quality, so
+# their probability mass is dropped and the dominant is chosen among the four.
 EMOTION_GROUPS = {
     "happy": ("happy",),
     "sad": ("sad",),
     "angry": ("angry", "disgust"),
-    "surprised": ("surprise", "fear"),
     "neutral": ("neutral",),
 }
 

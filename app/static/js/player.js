@@ -1,17 +1,138 @@
-// Persistent player bar. In P1 it's a visual shell (play toggle + volume);
-// P2 wires it to a real <audio> element playing Jamendo / uploaded tracks.
+// Persistent player bar — real <audio> playback with a queue (P2).
+// Other modules don't import this; they drive it through the bus ("playQueue").
+import { on, emit } from "./bus.js";
+import { isLiked, toggleLike } from "./likes.js";
+
 const $ = (s) => document.querySelector(s);
 
-let playing = false;
+const audio = new Audio();
+let queue = [];
+let index = -1;
+
+function currentTrack() {
+  return index >= 0 && index < queue.length ? queue[index] : null;
+}
+
+// Reflect the current track's liked state on the player heart.
+function renderLike() {
+  const btn = $("#player-like");
+  const t = currentTrack();
+  btn.disabled = !t;
+  const liked = t ? isLiked(t.id) : false;
+  btn.textContent = liked ? "❤️" : "🤍";
+  btn.classList.toggle("is-liked", liked);
+  btn.title = !t ? "Like" : liked ? "Remove from favorites" : "Add to favorites";
+}
+
+function renderNowPlaying(t) {
+  $("#player-title").textContent = t ? t.title : "Nothing playing";
+  $("#player-artist").textContent = t ? t.artist : "Pick a vibe to start";
+  const cover = $("#player-cover");
+  if (t && t.cover_url) {
+    cover.style.backgroundImage = `url("${t.cover_url}")`;
+    cover.classList.add("has-cover");
+    cover.textContent = "";
+  } else {
+    cover.style.backgroundImage = "";
+    cover.classList.remove("has-cover");
+    cover.textContent = "🎵";
+  }
+}
+
+function setPlayIcon(isPlaying) {
+  $("#player-play").textContent = isPlaying ? "⏸" : "▶";
+}
+
+async function load(i, autoplay = true) {
+  if (i < 0 || i >= queue.length) return;
+  index = i;
+  const t = queue[index];
+  audio.src = t.stream_url;
+  renderNowPlaying(t);
+  renderLike();
+  emit("nowplaying", { track: t, index });
+  if (autoplay) {
+    try {
+      await audio.play(); // may reject if the browser blocks autoplay
+    } catch {
+      setPlayIcon(false); // leave it cued; the user can press play
+    }
+  }
+}
+
+function release(streamUrl) {
+  // Drop the file handle the browser holds via <audio> so the server can
+  // unlink it on Windows. removeAttribute + load() forces the connection shut.
+  if (index >= 0 && queue[index]?.stream_url === streamUrl) {
+    audio.pause();
+    audio.removeAttribute("src");
+    audio.load();
+    setPlayIcon(false);
+    renderNowPlaying(null);
+    index = -1;
+    renderLike();
+  }
+}
+
+function toggle() {
+  if (!queue.length) return;
+  if (audio.paused) audio.play().catch(() => {});
+  else audio.pause();
+}
+
+function next() {
+  if (queue.length) load((index + 1) % queue.length);
+}
+
+function prev() {
+  if (!queue.length) return;
+  if (audio.currentTime > 3) { audio.currentTime = 0; return; } // restart first
+  load((index - 1 + queue.length) % queue.length);
+}
 
 export function initPlayer() {
-  const btn = $("#player-play");
-  btn.addEventListener("click", () => {
-    playing = !playing;
-    btn.textContent = playing ? "⏸" : "▶";
+  audio.volume = Number($("#player-volume").value) / 100 || 0.8;
+
+  $("#player-play").addEventListener("click", toggle);
+  $("#player-prev").addEventListener("click", prev);
+  $("#player-next").addEventListener("click", next);
+
+  audio.addEventListener("play", () => setPlayIcon(true));
+  audio.addEventListener("pause", () => setPlayIcon(false));
+  audio.addEventListener("ended", next);
+  audio.addEventListener("timeupdate", () => {
+    const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+    $("#player-progress").style.width = `${pct}%`;
   });
-  // Volume slider is wired here so it's ready for the real audio element in P2.
+  audio.addEventListener("error", () => {
+    // A dead stream shouldn't freeze the queue — skip to the next track.
+    if (queue.length > 1) next();
+  });
+
+  // Seek by clicking the progress bar.
+  $("#player-bar").addEventListener("click", (e) => {
+    if (!audio.duration) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    audio.currentTime = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * audio.duration;
+  });
+
   $("#player-volume").addEventListener("input", (e) => {
-    window._faceupVolume = Number(e.target.value) / 100;
+    audio.volume = Number(e.target.value) / 100;
   });
+
+  // Like / unlike the current track; keep the heart in sync with the store.
+  $("#player-like").addEventListener("click", () => {
+    const t = currentTrack();
+    if (t) toggleLike(t).catch(() => {});
+  });
+  on("likeschanged", renderLike);
+  renderLike();
+
+  // The Vibe view hands us a queue + the track to start on.
+  on("playQueue", ({ tracks, index: i }) => {
+    queue = tracks || [];
+    if (queue.length) load(i || 0, true);
+  });
+
+  on("releaseTrack", ({ stream_url }) => release(stream_url));
 }

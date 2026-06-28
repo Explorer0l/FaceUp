@@ -1,51 +1,82 @@
 // Vibe view: the hero tints to the current emotion and drives recommendations.
-// In P1 the recommendation cards are samples; P2 wires real Jamendo + uploads.
-import { EMOTIONS, EMOTION_ORDER } from "./emotions.js";
+// Mood tiles + Match/Lift toggle call /api/recommend (Audius, local fallback);
+// clicking a track hands the whole list to the player as a queue.
+import { EMOTIONS } from "./emotions.js";
 import { emit, on } from "./bus.js";
+import { getRecommendations } from "./api.js";
 
 const $ = (s) => document.querySelector(s);
 
 let mood = "happy";
 let mode = "lift"; // "match" | "lift"
+let tracks = [];
+let reqToken = 0; // guards against out-of-order responses
 
-// Placeholder track names per mood so the layout feels real before P2.
-const SAMPLES = {
-  happy: ["Bright Days", "Golden Hour", "Skip Along", "Good News"],
-  sad: ["Quiet Light", "Paper Boats", "Slow Rain", "Still Here"],
-  angry: ["Cooling Down", "Steady Breath", "Let It Pass", "Low Tide"],
-  surprised: ["Out of Nowhere", "Plot Twist", "Confetti", "Spark"],
-  neutral: ["Drift", "Open Window", "Plain Sky", "Easy Does It"],
-};
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+  );
+}
 
 function subText() {
   return `Mood: ${mood} · ${mode === "lift" ? "lifting it higher" : "matching it"}`;
 }
 
-function renderRecos() {
-  const list = $("#reco-list");
-  const titles = SAMPLES[mood] || SAMPLES.neutral;
-  const color = (EMOTIONS[mood] || EMOTIONS.neutral).color;
-  list.className = "reco reco-grid";
-  list.innerHTML = titles
-    .map(
-      (t) => `
-      <div class="card" style="padding:12px">
-        <div style="height:90px;border-radius:10px;background:${color}22;display:flex;align-items:center;justify-content:center;font-size:1.8rem">${(EMOTIONS[mood] || EMOTIONS.neutral).emoji}</div>
-        <div style="margin-top:8px;font-size:0.9rem;font-weight:500">${t}</div>
-        <div class="muted" style="font-size:0.8rem">Sample station <span class="tag">P2</span></div>
-      </div>`
-    )
-    .join("");
+function trackCard(t, i) {
+  const ph = (EMOTIONS[mood] || EMOTIONS.neutral).emoji;
+  const cover = t.cover_url
+    ? `<div class="rc__cover" style="background-image:url('${escapeHtml(t.cover_url)}')"></div>`
+    : `<div class="rc__cover rc__cover--ph">${ph}</div>`;
+  return `
+    <button class="rc" data-i="${i}" title="${escapeHtml(t.title)} — ${escapeHtml(t.artist)}">
+      ${cover}
+      <span class="rc__play">▶</span>
+      <div class="rc__title">${escapeHtml(t.title)}</div>
+      <div class="rc__artist muted">${escapeHtml(t.artist)}</div>
+    </button>`;
 }
 
-function setVibe(next) {
+async function loadRecos() {
+  const list = $("#reco-list");
+  const token = ++reqToken;
+  list.className = "reco";
+  list.innerHTML = `<p class="muted">Loading ${mood} tracks…</p>`;
+  try {
+    const data = await getRecommendations(mood, mode, 18);
+    if (token !== reqToken) return; // a newer request superseded this one
+    tracks = data.tracks || [];
+    if (!tracks.length) {
+      list.innerHTML = `<p class="muted">No tracks found for this mood. Try another.</p>`;
+      return;
+    }
+    const note =
+      data.source === "local"
+        ? `<span class="tag">offline library</span>`
+        : `<span class="tag">${escapeHtml((data.moods || []).join(" · "))}</span>`;
+    list.className = "reco";
+    list.innerHTML =
+      `<div class="reco__head muted">${tracks.length} tracks ${note}</div>` +
+      `<div class="reco-grid">${tracks.map(trackCard).join("")}</div>`;
+    list.querySelectorAll(".rc").forEach((el) =>
+      el.addEventListener("click", () =>
+        emit("playQueue", { tracks, index: Number(el.dataset.i) })
+      )
+    );
+  } catch (e) {
+    if (token !== reqToken) return;
+    list.className = "reco";
+    list.innerHTML = `<p class="error">Couldn't load music: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function setVibe(next, { reload = true } = {}) {
   if (next && EMOTIONS[next]) mood = next;
   $("#vibe-grad").style.background = (EMOTIONS[mood] || EMOTIONS.neutral).grad;
   $("#vibe-sub").textContent = subText();
   document.querySelectorAll(".tile").forEach((t) =>
     t.classList.toggle("is-active", t.dataset.mood === mood)
   );
-  renderRecos();
+  if (reload) loadRecos();
 }
 
 export function initVibe() {
@@ -62,8 +93,26 @@ export function initVibe() {
   );
   $("#vibe-scan").addEventListener("click", () => emit("navigate", "scan"));
 
-  // A detected emotion (from Mood scan) tints the vibe automatically.
+  // A detected emotion (from Mood scan) tints the vibe and reloads music.
   on("emotion", ({ emotion }) => setVibe(emotion));
 
-  setVibe("happy");
+  // Landing on the Vibe view with nothing loaded yet → fetch the current mood.
+  on("navigate", (view) => {
+    if (view === "vibe" && !tracks.length) loadRecos();
+  });
+
+  // A new/removed upload can change recommendations — refresh if we're showing some.
+  on("uploadschanged", () => {
+    if (tracks.length) loadRecos();
+  });
+
+  // Highlight the track the player is currently on.
+  on("nowplaying", ({ index }) => {
+    document.querySelectorAll(".rc").forEach((el) =>
+      el.classList.toggle("is-playing", Number(el.dataset.i) === index)
+    );
+  });
+
+  // Set the hero up front, but don't fetch until the user lands here / picks a mood.
+  setVibe("happy", { reload: false });
 }

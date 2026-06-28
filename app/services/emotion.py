@@ -1,26 +1,20 @@
-"""Emotion-recognition service: the only place that talks to DeepFace.
+"""Emotion-recognition facade.
 
-Responsibilities:
-  * decode a base64 image into an OpenCV/NumPy BGR array,
-  * run DeepFace emotion analysis,
-  * normalise DeepFace's output into our :class:`FaceResult` schema,
-  * warm the model up once at startup so the first real request is fast.
+Owns the shared image decoding + warm-up, and delegates the actual inference to
+the selected engine (DeepFace or one of our trained models) via the registry.
 """
 
 from __future__ import annotations
 
 import base64
 import binascii
-import time
 
 import cv2
 import numpy as np
 
-from app.config import EMOTION_GROUPS, settings
-from app.schemas import Box, FaceResult
-
-# DeepFace is imported lazily inside functions: importing it pulls in
-# TensorFlow (slow), so we defer it until the app actually needs it.
+from app.config import settings
+from app.schemas import FaceResult
+from app.services.engines import registry
 
 _model_ready = False
 
@@ -49,86 +43,21 @@ def decode_base64_image(image: str) -> np.ndarray:
     return frame
 
 
-def _to_face_results(detections: list[dict]) -> list[FaceResult]:
-    """Convert raw DeepFace dicts into our schema, dropping non-detections."""
-    results: list[FaceResult] = []
-    for det in detections:
-        region = det.get("region", {}) or {}
-        # DeepFace returns the whole image as the region when it finds no face;
-        # such "detections" usually have face_confidence 0 — skip them.
-        if det.get("face_confidence", 1) == 0:
-            continue
-
-        raw_scores = det.get("emotion", {}) or {}
-        # Collapse the raw 7 classes into our reduced set by summing each group.
-        scores = {
-            group: round(
-                sum(float(raw_scores.get(member, 0.0)) for member in members), 2
-            )
-            for group, members in EMOTION_GROUPS.items()
-        }
-        dominant = max(scores, key=scores.get) if scores else "unknown"
-        if scores.get(dominant, 0.0) < settings.min_confidence:
-            continue
-
-        results.append(
-            FaceResult(
-                box=Box(
-                    x=int(region.get("x", 0)),
-                    y=int(region.get("y", 0)),
-                    w=int(region.get("w", 0)),
-                    h=int(region.get("h", 0)),
-                ),
-                dominant=dominant,
-                scores=scores,
-            )
-        )
-    return results
-
-
 def analyze_frame(
-    frame: np.ndarray, detector_backend: str
+    frame: np.ndarray, model: str, mode: str
 ) -> tuple[list[FaceResult], int]:
-    """Run emotion analysis on a BGR frame with the given detector backend.
+    """Run the chosen model on a BGR frame. Empty list means no face."""
+    return registry.get(model).predict(frame, mode)
 
-    Returns ``(faces, infer_ms)``. An empty list means no face was found.
-    """
-    from deepface import DeepFace
 
-    start = time.perf_counter()
-    detections = DeepFace.analyze(
-        img_path=frame,
-        actions=("emotion",),
-        detector_backend=detector_backend,
-        enforce_detection=settings.enforce_detection,
-        silent=True,
-    )
-    infer_ms = int((time.perf_counter() - start) * 1000)
-
-    # DeepFace returns a dict for a single face, a list for many.
-    if isinstance(detections, dict):
-        detections = [detections]
-
-    return _to_face_results(detections), infer_ms
+def available_models() -> list[dict[str, str]]:
+    return registry.available_models()
 
 
 def warmup() -> None:
-    """Load the model once with a synthetic image (Risk #2).
-
-    Called at server startup so the first user request isn't penalised by the
-    one-off TensorFlow/model-load cost.
-    """
+    """Build the engine registry (warms DeepFace, loads any trained models)."""
     global _model_ready
-    dummy = np.zeros((224, 224, 3), dtype=np.uint8)
-    # Warm the emotion model and *both* detector backends (their weights download
-    # and load on first use), so the first real request of either mode is fast.
-    for backend in {settings.detector_webcam, settings.detector_upload}:
-        try:
-            analyze_frame(dummy, backend)
-        except Exception:  # noqa: BLE001 — warmup must never crash the server
-            # A blank image legitimately has no face; that's fine. We only care
-            # that the model weights got loaded into memory.
-            pass
+    registry.init()
     _model_ready = True
 
 

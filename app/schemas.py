@@ -24,6 +24,9 @@ class AnalyzeRequest(BaseModel):
     mode: Literal["upload", "webcam"] = Field(
         default="upload", description="Input mode; selects the detector backend."
     )
+    model: str = Field(
+        default="deepface", description="Which emotion engine to use (see /api/models)."
+    )
 
 
 class Box(BaseModel):
@@ -51,3 +54,60 @@ class HealthResponse(BaseModel):
     model_ready: bool
     detector_webcam: str
     detector_upload: str
+
+
+class ModelInfo(BaseModel):
+    id: str
+    label: str
+
+
+class ModelsResponse(BaseModel):
+    models: list[ModelInfo]
+    default: str
+
+
+class Track(BaseModel):
+    """One playable track, normalized across sources (Audius / local fallback)."""
+
+    id: str
+    title: str
+    artist: str
+    mood: str = Field("", description="Source mood tag, if any (e.g. 'Upbeat').")
+    genre: str = ""
+    duration: int = Field(0, description="Length in seconds (0 if unknown).")
+    stream_url: str = Field(..., description="URL an <audio> element can play.")
+    cover_url: str = ""
+    source: Literal["audius", "local"] = "audius"
+
+
+class FocusLogRequest(BaseModel):
+    """Log a completed focus session."""
+
+    seconds: int = Field(
+        ..., gt=0, le=24 * 60 * 60, description="Session length in seconds."
+    )
+
+
+class DayStat(BaseModel):
+    date: str = Field(..., description="ISO date (YYYY-MM-DD).")
+    seconds: int = Field(0, description="Total focus seconds that day.")
+
+
+class FocusStatsResponse(BaseModel):
+    total_seconds: int = 0
+    total_sessions: int = 0
+    days: list[DayStat] = Field(
+        default_factory=list, description="Per-day seconds, oldest first."
+    )
+
+
+class RecommendResponse(BaseModel):
+    emotion: str = Field(..., description="The detected/selected emotion.")
+    mode: Literal["match", "lift"] = Field(..., description="Mirror vs regulate mood.")
+    moods: list[str] = Field(
+        default_factory=list, description="Audius mood tags this maps to."
+    )
+    tracks: list[Track] = Field(default_factory=list)
+    source: Literal["audius", "local"] = Field(
+        "audius", description="Where the tracks came from (local = offline fallback)."
+    )

@@ -5,6 +5,10 @@ import { initMoodScan } from "./moodScan.js";
 import { initVibe } from "./vibe.js";
 import { initFocus } from "./focus.js";
 import { initPlayer } from "./player.js";
+import { initAdd } from "./add.js";
+import { initCollection } from "./collection.js";
+import { initStats } from "./stats.js";
+import { loadLikes } from "./likes.js";
 
 async function checkHealth() {
   const el = document.querySelector("#server-status");
@@ -29,4 +33,8 @@ initMoodScan();
 initVibe();
 initFocus();
 initPlayer();
+initAdd();
+initCollection();
+initStats();
+loadLikes(); // hydrate like-state so the player heart + Collection render correctly
 checkHealth();

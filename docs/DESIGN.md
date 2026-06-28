@@ -117,6 +117,24 @@ by the current emotion.
 - [ ] **P6** Stats — SQLite session/mood logging + charts.
 - [ ] **P7** Polish + report/slides.
 
+### Phase 3 — train our own neural networks (course depth: Topics 6–8)
+
+A "model zoo" behind one `EmotionEngine` interface, letting users pick the
+network. Demonstrates NumPy/tensors (T6), preprocessing + softmax regression
+(T7), and CNN + Keras + `tf.GradientTape` (T8). FER2013 remapped to our 5 classes.
+
+- [x] **ML-1** Training pipeline scaffold (`ml/`): data loader (CSV or image
+  folders), preprocessing, softmax + CNN models, trainer (Keras `.fit` **and**
+  GradientTape loop), evaluator (report + confusion matrix). Verified on
+  synthetic data. CPU-only here (TF 2.18 native Windows has no GPU).
+- [ ] **ML-2** Obtain FER2013 + train softmax baseline & custom CNN; record
+  accuracy/confusion matrix.
+- [ ] **ML-3** Transfer-learning model (MobileNetV2) for comparison.
+- [x] **ML-4** Inference engine registry (`app/services/engines/`): DeepFace +
+  Keras engines behind one `predict()` contract; `GET /api/models`, `model` field
+  on `/api/analyze`, frontend model picker. Trained engines auto-appear once
+  weights exist in `ml/artifacts/`. Verified incl. KerasEngine load + fallback.
+
 ## 7. Open questions / future
 
 - Detector backend is chosen **per mode**: `ssd` for webcam (~34 ms/frame,
