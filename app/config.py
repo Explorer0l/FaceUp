@@ -80,14 +80,16 @@ settings = Settings()
 # We collapse DeepFace's 7 raw classes into a smaller, clearer set. DeepFace
 # routinely confuses visually-similar expressions, so we *sum* the probabilities
 # of grouped classes rather than dropping any signal:
-#   angry      <- angry + disgust
-#   surprised  <- surprise + fear
+#   angry  <- angry + disgust
 # happy / sad / neutral pass through unchanged. Keys define the display order.
+#
+# We intentionally expose only these four emotions: DeepFace's "surprise" and
+# "fear" are its least reliable classes and were hurting detection quality, so
+# their probability mass is dropped and the dominant is chosen among the four.
 EMOTION_GROUPS = {
     "happy": ("happy",),
     "sad": ("sad",),
     "angry": ("angry", "disgust"),
-    "surprised": ("surprise", "fear"),
     "neutral": ("neutral",),
 }
 
