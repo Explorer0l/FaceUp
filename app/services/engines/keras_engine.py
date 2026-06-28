@@ -2,7 +2,9 @@
 
 Loads ``ml/artifacts/<name>.keras`` if present (so it's only "available" once
 trained), detects faces with an OpenCV Haar cascade, then classifies each crop
-with the model. The model's 5 outputs map 1:1 to our class order.
+with the model. Models output the 5 trained classes; we surface only the
+emotions the app currently exposes (``EMOTION_LABELS``) and drop the rest, so a
+5-class model still works after we narrowed the app to four emotions.
 """
 
 from __future__ import annotations
@@ -12,6 +14,7 @@ import time
 import cv2
 import numpy as np
 
+from app.config import EMOTION_LABELS
 from ml import config as mlcfg
 
 from .base import EmotionEngine, make_face_result
@@ -68,6 +71,7 @@ class KerasEngine(EmotionEngine):
             scores = {
                 mlcfg.FIVE_CLASSES[i]: round(float(probs[i]) * 100, 2)
                 for i in range(len(mlcfg.FIVE_CLASSES))
+                if mlcfg.FIVE_CLASSES[i] in EMOTION_LABELS
             }
             fr = make_face_result(x, y, w, h, scores)
             if fr:

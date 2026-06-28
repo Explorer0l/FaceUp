@@ -25,10 +25,6 @@ _MOOD_MAP: dict[str, dict[str, list[str]]] = {
         "match": ["Aggressive", "Fiery", "Defiant", "Rowdy"],
         "lift": ["Peaceful", "Easygoing", "Tender"],
     },
-    "surprised": {
-        "match": ["Excited", "Energizing", "Stirring"],
-        "lift": ["Easygoing", "Peaceful"],
-    },
     "neutral": {
         "match": ["Cool", "Easygoing", "Sophisticated"],
         "lift": ["Upbeat", "Empowering"],
@@ -44,7 +40,6 @@ _LIFT_TARGET = {
     "happy": "happy",
     "sad": "happy",
     "angry": "neutral",
-    "surprised": "neutral",
     "neutral": "happy",
 }
 
