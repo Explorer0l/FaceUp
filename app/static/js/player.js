@@ -1,12 +1,28 @@
 // Persistent player bar — real <audio> playback with a queue (P2).
 // Other modules don't import this; they drive it through the bus ("playQueue").
 import { on, emit } from "./bus.js";
+import { isLiked, toggleLike } from "./likes.js";
 
 const $ = (s) => document.querySelector(s);
 
 const audio = new Audio();
 let queue = [];
 let index = -1;
+
+function currentTrack() {
+  return index >= 0 && index < queue.length ? queue[index] : null;
+}
+
+// Reflect the current track's liked state on the player heart.
+function renderLike() {
+  const btn = $("#player-like");
+  const t = currentTrack();
+  btn.disabled = !t;
+  const liked = t ? isLiked(t.id) : false;
+  btn.textContent = liked ? "❤️" : "🤍";
+  btn.classList.toggle("is-liked", liked);
+  btn.title = !t ? "Like" : liked ? "Remove from favorites" : "Add to favorites";
+}
 
 function renderNowPlaying(t) {
   $("#player-title").textContent = t ? t.title : "Nothing playing";
@@ -33,6 +49,7 @@ async function load(i, autoplay = true) {
   const t = queue[index];
   audio.src = t.stream_url;
   renderNowPlaying(t);
+  renderLike();
   emit("nowplaying", { track: t, index });
   if (autoplay) {
     try {
@@ -40,6 +57,20 @@ async function load(i, autoplay = true) {
     } catch {
       setPlayIcon(false); // leave it cued; the user can press play
     }
+  }
+}
+
+function release(streamUrl) {
+  // Drop the file handle the browser holds via <audio> so the server can
+  // unlink it on Windows. removeAttribute + load() forces the connection shut.
+  if (index >= 0 && queue[index]?.stream_url === streamUrl) {
+    audio.pause();
+    audio.removeAttribute("src");
+    audio.load();
+    setPlayIcon(false);
+    renderNowPlaying(null);
+    index = -1;
+    renderLike();
   }
 }
 
@@ -89,9 +120,19 @@ export function initPlayer() {
     audio.volume = Number(e.target.value) / 100;
   });
 
+  // Like / unlike the current track; keep the heart in sync with the store.
+  $("#player-like").addEventListener("click", () => {
+    const t = currentTrack();
+    if (t) toggleLike(t).catch(() => {});
+  });
+  on("likeschanged", renderLike);
+  renderLike();
+
   // The Vibe view hands us a queue + the track to start on.
   on("playQueue", ({ tracks, index: i }) => {
     queue = tracks || [];
     if (queue.length) load(i || 0, true);
   });
+
+  on("releaseTrack", ({ stream_url }) => release(stream_url));
 }

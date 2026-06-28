@@ -14,8 +14,7 @@
       <nav class="nav">
         <button class="nav-item is-active" data-nav="scan"><span>🎭</span> Mood scan</button>
         <button class="nav-item" data-nav="vibe"><span>✨</span> My vibe</button>
-        <button class="nav-item" data-nav="focus"><span>⏱️</span> Focus</button>
-        <button class="nav-item" data-nav="stats"><span>📊</span> Stats</button>
+        <button class="nav-item" data-nav="focus"><span>⏱️</span> Focus &amp; Stats</button>
         <button class="nav-item" data-nav="collection"><span>❤️</span> Collection</button>
         <button class="nav-item" data-nav="add"><span>⬆️</span> Add songs</button>
         <button class="nav-item" data-nav="search"><span>🔍</span> Search</button>
@@ -124,7 +123,6 @@
           <button class="tile" data-mood="happy"><span class="blob" style="background:#ffd24a"></span>Happy</button>
           <button class="tile" data-mood="sad"><span class="blob" style="background:#5aa9ff"></span>Sad</button>
           <button class="tile" data-mood="angry"><span class="blob" style="background:#ff5c5c"></span>Angry</button>
-          <button class="tile" data-mood="surprised"><span class="blob" style="background:#ff9f43"></span>Surprised</button>
           <button class="tile" data-mood="neutral"><span class="blob" style="background:#9aa0a6"></span>Neutral</button>
         </div>
 
@@ -136,7 +134,9 @@
 
       <!-- ---- Focus ---- -->
       <section class="view" data-view="focus">
-        <header class="view-head"><h1>Focus</h1><p class="muted">A timer and a calm station to get into deep work.</p></header>
+        <header class="view-head"><h1>Focus &amp; Stats</h1><p class="muted">A timer and a calm station to get into deep work — and your progress over time.</p></header>
+
+        <h2 class="section-title">Focus session</h2>
         <div class="focus-grid">
           <div class="card focus-timer">
             <div id="focus-ring" class="ring"><span id="focus-time">25:00</span></div>
@@ -152,23 +152,62 @@
           </div>
           <div class="card">
             <h2>Focus station</h2>
-            <p class="muted">Instrumental / lo-fi for concentration. <span class="tag">music arrives with P2</span></p>
+            <p class="muted">Instrumental / lo-fi for concentration. <span class="tag">music arrives with P5</span></p>
           </div>
         </div>
+
+        <h2 class="section-title">Your stats</h2>
+        <div id="stats-panel" class="placeholder">📊 Focus minutes, sessions, streaks, and your mood history arrive with the SQLite backend (P6).</div>
       </section>
 
       <!-- ---- Stubs (built in later phases) ---- -->
-      <section class="view" data-view="stats">
-        <header class="view-head"><h1>Stats</h1><p class="muted">Focus minutes, sessions, streaks, and your mood history.</p></header>
-        <div class="placeholder">📊 Progress statistics arrive with the SQLite backend (P6).</div>
-      </section>
       <section class="view" data-view="collection">
-        <header class="view-head"><h1>Collection</h1><p class="muted">Tracks you've liked.</p></header>
-        <div class="placeholder">❤️ Your liked tracks will live here.</div>
+        <header class="view-head"><h1>Collection</h1><p class="muted">Your favorite tracks, saved for later.</p></header>
+        <div id="like-list" class="placeholder">❤️ No favorites yet — tap the heart on any track to save it here.</div>
       </section>
       <section class="view" data-view="add">
-        <header class="view-head"><h1>Add songs</h1><p class="muted">Upload your own tracks and tag them by mood.</p></header>
-        <div class="placeholder">⬆️ Uploads + mood tagging arrive with P3 (stored in SQLite).</div>
+        <header class="view-head"><h1>Add songs</h1><p class="muted">Upload your own tracks and tag them by mood — they join your recommendations.</p></header>
+        <div class="add-grid">
+          <form id="upload-form" class="card">
+            <h2>Upload a track</h2>
+            <label id="upload-drop" class="dropzone" for="upload-file">
+              <input id="upload-file" type="file" accept="audio/*" hidden />
+              <span class="dropzone__icon">⬆</span>
+              <span id="upload-filename">Click to choose an audio file<br /><small class="muted">mp3, wav, ogg, m4a, flac · max 20&nbsp;MB</small></span>
+            </label>
+            <div class="field">
+              <label class="muted" for="upload-title">Title</label>
+              <input id="upload-title" type="text" placeholder="Track title" />
+            </div>
+            <div class="field">
+              <label class="muted" for="upload-artist">Artist</label>
+              <input id="upload-artist" type="text" placeholder="Artist (optional)" />
+            </div>
+            <div class="field">
+              <label class="muted">Cover image <small>(optional)</small></label>
+              <input id="cover-file" type="file" accept="image/*" hidden />
+              <label id="cover-preview" class="cover-pick" for="cover-file">
+                <span class="cover-pick__icon">🖼️</span><span class="muted">Add cover<br /><small>jpg, png, webp · optional</small></span>
+              </label>
+            </div>
+            <div class="field">
+              <label class="muted">Mood</label>
+              <div id="upload-mood" class="mood-pick">
+                <button type="button" class="moodbtn is-active" data-mood="happy">😄 Happy</button>
+                <button type="button" class="moodbtn" data-mood="sad">😢 Sad</button>
+                <button type="button" class="moodbtn" data-mood="angry">😠 Angry</button>
+                <button type="button" class="moodbtn" data-mood="neutral">😐 Neutral</button>
+              </div>
+            </div>
+            <button id="upload-submit" class="btn btn--accent btn--block" type="submit">Upload track</button>
+            <div id="upload-msg" class="upload-msg muted" hidden></div>
+          </form>
+
+          <div class="card">
+            <h2>Your tracks</h2>
+            <div id="upload-list" class="upload-list"><p class="muted">No uploads yet.</p></div>
+          </div>
+        </div>
       </section>
       <section class="view" data-view="search">
         <header class="view-head"><h1>Search</h1><p class="muted">Find tracks and stations.</p></header>
@@ -186,7 +225,7 @@
         <div id="player-title" class="player__title">Nothing playing</div>
         <div id="player-artist" class="player__artist muted">Pick a vibe to start</div>
       </div>
-      <button class="iconbtn" aria-label="Like" title="Like">🤍</button>
+      <button id="player-like" class="iconbtn" aria-label="Like" title="Like" disabled>🤍</button>
     </div>
     <div class="player__controls">
       <div class="player__buttons">

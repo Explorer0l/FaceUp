@@ -36,15 +36,15 @@ def test_decode_rejects_garbage():
         emotion.decode_base64_image("not-base64!!")
 
 
-def test_group_scores_folds_7_into_5():
+def test_group_scores_folds_7_into_4():
     from app.services.engines.deepface_engine import group_scores
 
     scores = group_scores(
         {"angry": 20.0, "disgust": 10.0, "fear": 5.0, "happy": 8.0,
          "sad": 2.0, "surprise": 15.0, "neutral": 40.0}
     )
-    assert scores == {"happy": 8.0, "sad": 2.0, "angry": 30.0,
-                      "surprised": 20.0, "neutral": 40.0}  # disgust→angry, fear→surprised
+    # disgust→angry; fear + surprise are dropped (not one of our four emotions).
+    assert scores == {"happy": 8.0, "sad": 2.0, "angry": 30.0, "neutral": 40.0}
     assert max(scores, key=scores.get) == "neutral"
 
 
