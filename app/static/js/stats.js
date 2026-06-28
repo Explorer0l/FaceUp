@@ -17,11 +17,31 @@ function dayLabel(iso) {
   return d.toLocaleDateString(undefined, { weekday: "short" });
 }
 
+// Seconds -> human duration, keeping enough precision that accumulation is
+// always visible: 30 -> "30s", 70 -> "1m 10s", 1500 -> "25m", 5430 -> "1h 30m".
+// Seconds are shown below the hour mark (where they matter) and dropped above it.
+function fmtDuration(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  const parts = [];
+  if (h) parts.push(`${h}h`);
+  if (m) parts.push(`${m}m`);
+  if (s && !h) parts.push(`${s}s`);
+  return parts.length ? parts.join(" ") : "0s";
+}
+
+// Short per-bar label: minutes for >= 1 min, otherwise seconds.
+function barLabel(sec) {
+  if (!sec) return "";
+  return sec >= 60 ? `${Math.round(sec / 60)}m` : `${sec}s`;
+}
+
 function bar(d, max) {
-  const pct = max > 0 ? Math.round((d.minutes / max) * 100) : 0;
+  const pct = max > 0 ? Math.round((d.seconds / max) * 100) : 0;
   return `
-    <div class="bar7" title="${d.date}: ${d.minutes} min">
-      <span class="bar7__val muted">${d.minutes || ""}</span>
+    <div class="bar7" title="${d.date}: ${fmtDuration(d.seconds)}">
+      <span class="bar7__val muted">${barLabel(d.seconds)}</span>
       <span class="bar7__track"><span class="bar7__fill" style="height:${pct}%"></span></span>
       <span class="bar7__day muted">${dayLabel(d.date)}</span>
     </div>`;
@@ -36,13 +56,13 @@ function render(data) {
     return;
   }
   const days = data.days || [];
-  const max = Math.max(1, ...days.map((d) => d.minutes));
+  const max = Math.max(1, ...days.map((d) => d.seconds));
   box.className = "stats";
   box.innerHTML = `
     <div class="stat-tiles">
       <div class="stat-tile">
-        <div class="stat-tile__num">${data.total_minutes}</div>
-        <div class="stat-tile__label muted">Focus minutes</div>
+        <div class="stat-tile__num">${fmtDuration(data.total_seconds)}</div>
+        <div class="stat-tile__label muted">Focus time</div>
       </div>
       <div class="stat-tile">
         <div class="stat-tile__num">${data.total_sessions}</div>

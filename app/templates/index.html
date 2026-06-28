@@ -141,10 +141,18 @@
           <div class="card focus-timer">
             <div id="focus-ring" class="ring"><span id="focus-time">25:00</span></div>
             <div class="row focus-presets">
-              <button class="btn preset is-active" data-min="25">25 min</button>
-              <button class="btn preset" data-min="50">50 min</button>
-              <button class="btn preset" data-min="5">5 min</button>
+              <button class="btn preset" data-sec="30">30 sec</button>
+              <button class="btn preset" data-sec="300">5 min</button>
+              <button class="btn preset is-active" data-sec="1500">25 min</button>
+              <button class="btn preset" data-sec="3000">50 min</button>
             </div>
+            <form id="focus-custom" class="row focus-custom">
+              <label class="muted">Custom</label>
+              <input id="focus-min" class="focus-num" type="number" min="0" max="999" placeholder="min" aria-label="Minutes" />
+              <span class="focus-colon">:</span>
+              <input id="focus-sec" class="focus-num" type="number" min="0" max="59" placeholder="sec" aria-label="Seconds" />
+              <button id="focus-set" class="btn" type="submit">Set</button>
+            </form>
             <div class="row">
               <button id="focus-toggle" class="btn btn--accent" type="button">Start focus</button>
               <button id="focus-reset" class="btn" type="button">Reset</button>

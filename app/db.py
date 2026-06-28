@@ -45,11 +45,34 @@ def _apply_additive_migrations() -> None:
                     conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
 
 
+def _migrate_focussession_to_seconds() -> None:
+    """Convert the legacy ``focussession.minutes`` column to ``seconds`` (× 60).
+
+    FocusSession first stored whole minutes; second-precision timers need
+    seconds. create_all can't alter an existing table, so we add ``seconds``,
+    backfill from ``minutes * 60`` (no data lost), and drop the old column.
+    """
+    inspector = inspect(_engine)
+    if "focussession" not in inspector.get_table_names():
+        return  # fresh DB: create_all already made the seconds schema
+    cols = {c["name"] for c in inspector.get_columns("focussession")}
+    if "seconds" in cols or "minutes" not in cols:
+        return  # already migrated
+    with _engine.begin() as conn:
+        conn.execute(text("ALTER TABLE focussession ADD COLUMN seconds INTEGER"))
+        conn.execute(text("UPDATE focussession SET seconds = minutes * 60"))
+        try:  # DROP COLUMN needs SQLite >= 3.35; leaving it is harmless otherwise
+            conn.execute(text("ALTER TABLE focussession DROP COLUMN minutes"))
+        except Exception:  # noqa: BLE001
+            pass
+
+
 def init_db() -> None:
-    """Create the database file + tables, then apply additive column migrations."""
+    """Create the database file + tables, then apply schema migrations."""
     _db_file.parent.mkdir(parents=True, exist_ok=True)
     SQLModel.metadata.create_all(_engine)
     _apply_additive_migrations()
+    _migrate_focussession_to_seconds()
 
 
 @contextmanager
