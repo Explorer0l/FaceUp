@@ -9,11 +9,18 @@ const $ = (s) => document.querySelector(s);
 
 let mood = "happy";
 let file = null;
+let cover = null;
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
   );
+}
+
+// Public URL for a row's custom cover image, or "" if it has none. Mirrors how
+// stream_url is built from the stored filename.
+function coverUrl(row) {
+  return row.cover_filename ? `/uploads/covers/${row.cover_filename}` : "";
 }
 
 // An UploadedTrack row -> the player's track shape.
@@ -24,9 +31,20 @@ function toPlayable(row) {
     artist: row.artist,
     mood: row.emotion,
     stream_url: `/uploads/${row.filename}`,
-    cover_url: "",
+    cover_url: coverUrl(row),
     source: "local",
   };
+}
+
+// Leading thumbnail for a track row: the custom cover if present, else the
+// emotion emoji.
+function thumb(row) {
+  const url = coverUrl(row);
+  if (url) {
+    return `<span class="ut__thumb" style="background-image:url('${escapeHtml(url)}')"></span>`;
+  }
+  const e = EMOTIONS[row.emotion] || EMOTIONS.neutral;
+  return `<span class="ut__emoji" title="${escapeHtml(row.emotion)}">${e.emoji}</span>`;
 }
 
 function showMsg(text, isError = false) {
@@ -52,10 +70,9 @@ async function refreshList() {
   }
   box.innerHTML = rows
     .map((r) => {
-      const e = EMOTIONS[r.emotion] || EMOTIONS.neutral;
       return `
       <div class="ut" data-id="${r.id}">
-        <span class="ut__emoji" title="${escapeHtml(r.emotion)}">${e.emoji}</span>
+        ${thumb(r)}
         <div class="ut__meta">
           <div class="ut__title">${escapeHtml(r.title)}</div>
           <div class="ut__artist muted">${escapeHtml(r.artist)}</div>
@@ -99,6 +116,31 @@ function pickFile(f) {
   if (!$("#upload-title").value) $("#upload-title").value = f.name.replace(/\.[^.]+$/, "");
 }
 
+const COVER_PLACEHOLDER = `<span class="cover-pick__icon">🖼️</span><span class="muted">Add cover<br /><small>jpg, png, webp · optional</small></span>`;
+
+function renderCoverPreview() {
+  const box = $("#cover-preview");
+  if (cover) {
+    box.classList.add("has-cover");
+    box.style.backgroundImage = `url('${URL.createObjectURL(cover)}')`;
+    box.innerHTML = "";
+  } else {
+    box.classList.remove("has-cover");
+    box.style.backgroundImage = "";
+    box.innerHTML = COVER_PLACEHOLDER;
+  }
+}
+
+function pickCover(f) {
+  if (!f) return;
+  if (!f.type.startsWith("image/") && !/\.(jpe?g|png|webp|gif)$/i.test(f.name)) {
+    showMsg("Please choose an image file for the cover.", true);
+    return;
+  }
+  cover = f;
+  renderCoverPreview();
+}
+
 async function submit(e) {
   e.preventDefault();
   if (!file) {
@@ -110,6 +152,7 @@ async function submit(e) {
   form.append("title", $("#upload-title").value);
   form.append("artist", $("#upload-artist").value);
   form.append("emotion", mood);
+  if (cover) form.append("cover", cover);
 
   const btn = $("#upload-submit");
   btn.disabled = true;
@@ -119,7 +162,9 @@ async function submit(e) {
     showMsg(`Added “${row.title}” as ${row.emotion}.`);
     // reset the form
     file = null;
+    cover = null;
     $("#upload-form").reset();
+    renderCoverPreview();
     $("#upload-filename").innerHTML =
       `Click to choose an audio file<br /><small class="muted">mp3, wav, ogg, m4a, flac · max 20&nbsp;MB</small>`;
     await refreshList();
@@ -144,6 +189,18 @@ export function initAdd() {
     drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("is-drag"); })
   );
   drop.addEventListener("drop", (e) => pickFile(e.dataTransfer?.files?.[0]));
+
+  // Optional custom cover image (click to choose or drag-drop onto the preview).
+  const coverInput = $("#cover-file");
+  coverInput.addEventListener("change", (e) => pickCover(e.target.files[0]));
+  const coverBox = $("#cover-preview");
+  ["dragenter", "dragover"].forEach((ev) =>
+    coverBox.addEventListener(ev, (e) => { e.preventDefault(); coverBox.classList.add("is-drag"); })
+  );
+  ["dragleave", "drop"].forEach((ev) =>
+    coverBox.addEventListener(ev, (e) => { e.preventDefault(); coverBox.classList.remove("is-drag"); })
+  );
+  coverBox.addEventListener("drop", (e) => pickCover(e.dataTransfer?.files?.[0]));
 
   $("#upload-mood").querySelectorAll(".moodbtn").forEach((b) =>
     b.addEventListener("click", () => {

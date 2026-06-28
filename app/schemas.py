@@ -80,6 +80,25 @@ class Track(BaseModel):
     source: Literal["audius", "local"] = "audius"
 
 
+class FocusLogRequest(BaseModel):
+    """Log a completed focus session."""
+
+    minutes: int = Field(..., gt=0, le=24 * 60, description="Session length in minutes.")
+
+
+class DayStat(BaseModel):
+    date: str = Field(..., description="ISO date (YYYY-MM-DD).")
+    minutes: int = Field(0, description="Total focus minutes that day.")
+
+
+class FocusStatsResponse(BaseModel):
+    total_minutes: int = 0
+    total_sessions: int = 0
+    days: list[DayStat] = Field(
+        default_factory=list, description="Per-day minutes, oldest first."
+    )
+
+
 class RecommendResponse(BaseModel):
     emotion: str = Field(..., description="The detected/selected emotion.")
     mode: Literal["match", "lift"] = Field(..., description="Mirror vs regulate mood.")

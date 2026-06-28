@@ -18,9 +18,9 @@ from sqlmodel import Session, select
 from app.config import settings
 from app.db import session_scope
 from app.models import UploadedTrack
-from app.services.music.moods import lift_target
 
 ALLOWED_EXT = {".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac"}
+ALLOWED_COVER_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 
 class UploadError(ValueError):
@@ -33,13 +33,34 @@ def _uploads_path() -> Path:
     return p
 
 
+def _covers_path() -> Path:
+    p = _uploads_path() / "covers"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def _save_cover(data: bytes, original_name: str) -> str:
+    """Persist a cover image and return its stored filename."""
+    ext = Path(original_name or "").suffix.lower()
+    if ext not in ALLOWED_COVER_EXT:
+        raise UploadError(f"Unsupported image type '{ext or '?'}'.")
+    fname = f"{uuid.uuid4().hex}{ext}"
+    (_covers_path() / fname).write_bytes(data)
+    return fname
+
+
 def save_upload(
     session: Session, *, data: bytes, original_name: str,
     title: str, artist: str, emotion: str, duration: int = 0,
+    cover_data: bytes | None = None, cover_name: str = "",
 ) -> UploadedTrack:
     ext = Path(original_name or "").suffix.lower()
     if ext not in ALLOWED_EXT:
         raise UploadError(f"Unsupported audio type '{ext or '?'}'.")
+    # Validate + store the optional cover before writing anything, so a bad
+    # cover fails the whole upload instead of leaving an orphan audio file.
+    cover_filename = _save_cover(cover_data, cover_name) if cover_data else None
+
     fname = f"{uuid.uuid4().hex}{ext}"
     (_uploads_path() / fname).write_bytes(data)
 
@@ -48,6 +69,7 @@ def save_upload(
         artist=(artist or "").strip() or "You",
         emotion=emotion,
         filename=fname,
+        cover_filename=cover_filename,
         duration=duration,
     )
     session.add(row)
@@ -85,12 +107,20 @@ def delete_upload(session: Session, track_id: int) -> bool:
     if not row:
         return False
     f = _uploads_path() / row.filename
+    cover = _covers_path() / row.cover_filename if row.cover_filename else None
     # Drop the row first so the track leaves the UI even if the file is locked
-    # for a moment; then release the file best-effort.
+    # for a moment; then release the files best-effort.
     session.delete(row)
     session.commit()
     _remove_file(f)
+    if cover:
+        _remove_file(cover)
     return True
+
+
+def cover_url(row: UploadedTrack) -> str:
+    """Public URL for a track's cover image, or "" if it has none."""
+    return f"/uploads/covers/{row.cover_filename}" if row.cover_filename else ""
 
 
 def to_track(row: UploadedTrack) -> dict:
@@ -103,14 +133,19 @@ def to_track(row: UploadedTrack) -> dict:
         "genre": "Your upload",
         "duration": row.duration,
         "stream_url": f"/uploads/{row.filename}",
-        "cover_url": "",
+        "cover_url": cover_url(row),
         "source": "local",
     }
 
 
-def uploads_for_emotion(emotion: str, mode: str) -> list[dict]:
-    """Track dicts for uploads matching this vibe. Opens its own DB session."""
-    target = (emotion or "").lower() if mode == "match" else lift_target(emotion)
+def uploads_for_emotion(emotion: str) -> list[dict]:
+    """Track dicts for uploads tagged with this emotion. Opens its own session.
+
+    An upload lives in the 'album' of the emotion it was tagged with and surfaces
+    there in both Match and Lift modes — your 'sad' track always shows under Sad,
+    regardless of the recommend strategy.
+    """
+    target = (emotion or "").lower()
     with session_scope() as session:
         rows = session.exec(
             select(UploadedTrack).where(UploadedTrack.emotion == target)

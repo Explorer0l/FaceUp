@@ -17,11 +17,6 @@ export const EMOTIONS = {
     color: "#ff5c5c",
     grad: "radial-gradient(60% 70% at 68% 38%,#ff7a59 0%,#b02525 45%,#350f0f 100%)",
   },
-  surprised: {
-    emoji: "😲",
-    color: "#ff9f43",
-    grad: "radial-gradient(60% 70% at 68% 38%,#ffb43d 0%,#c0357f 45%,#2a1030 100%)",
-  },
   neutral: {
     emoji: "😐",
     color: "#9aa0a6",
