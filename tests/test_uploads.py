@@ -79,7 +79,7 @@ def test_to_track_shape():
     assert t["source"] == "local"
 
 
-def test_uploads_for_emotion_match_vs_lift(session, monkeypatch):
+def test_uploads_for_emotion_surfaces_under_tag(session, monkeypatch):
     uploads.save_upload(session, data=b"a", original_name="h.mp3",
                         title="Happy", artist="", emotion="happy")
     uploads.save_upload(session, data=b"a", original_name="s.mp3",
@@ -91,8 +91,6 @@ def test_uploads_for_emotion_match_vs_lift(session, monkeypatch):
 
     monkeypatch.setattr(uploads, "session_scope", fake_scope)
 
-    match = uploads.uploads_for_emotion("sad", "match")
-    assert [t["title"] for t in match] == ["Sad"]          # mirror the mood
-
-    lift = uploads.uploads_for_emotion("sad", "lift")
-    assert [t["title"] for t in lift] == ["Happy"]         # sad lifts toward happy
+    # An upload lives in the album of the emotion it was tagged with.
+    assert [t["title"] for t in uploads.uploads_for_emotion("sad")] == ["Sad"]
+    assert [t["title"] for t in uploads.uploads_for_emotion("happy")] == ["Happy"]

@@ -18,7 +18,6 @@ from sqlmodel import Session, select
 from app.config import settings
 from app.db import session_scope
 from app.models import UploadedTrack
-from app.services.music.moods import lift_target
 
 ALLOWED_EXT = {".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac"}
 
@@ -108,9 +107,14 @@ def to_track(row: UploadedTrack) -> dict:
     }
 
 
-def uploads_for_emotion(emotion: str, mode: str) -> list[dict]:
-    """Track dicts for uploads matching this vibe. Opens its own DB session."""
-    target = (emotion or "").lower() if mode == "match" else lift_target(emotion)
+def uploads_for_emotion(emotion: str) -> list[dict]:
+    """Track dicts for uploads tagged with this emotion. Opens its own session.
+
+    An upload lives in the 'album' of the emotion it was tagged with and surfaces
+    there in both Match and Lift modes — your 'sad' track always shows under Sad,
+    regardless of the recommend strategy.
+    """
+    target = (emotion or "").lower()
     with session_scope() as session:
         rows = session.exec(
             select(UploadedTrack).where(UploadedTrack.emotion == target)
