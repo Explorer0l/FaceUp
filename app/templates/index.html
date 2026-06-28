@@ -167,8 +167,42 @@
         <div class="placeholder">❤️ Your liked tracks will live here.</div>
       </section>
       <section class="view" data-view="add">
-        <header class="view-head"><h1>Add songs</h1><p class="muted">Upload your own tracks and tag them by mood.</p></header>
-        <div class="placeholder">⬆️ Uploads + mood tagging arrive with P3 (stored in SQLite).</div>
+        <header class="view-head"><h1>Add songs</h1><p class="muted">Upload your own tracks and tag them by mood — they join your recommendations.</p></header>
+        <div class="add-grid">
+          <form id="upload-form" class="card">
+            <h2>Upload a track</h2>
+            <label id="upload-drop" class="dropzone" for="upload-file">
+              <input id="upload-file" type="file" accept="audio/*" hidden />
+              <span class="dropzone__icon">⬆</span>
+              <span id="upload-filename">Click to choose an audio file<br /><small class="muted">mp3, wav, ogg, m4a, flac · max 20&nbsp;MB</small></span>
+            </label>
+            <div class="field">
+              <label class="muted" for="upload-title">Title</label>
+              <input id="upload-title" type="text" placeholder="Track title" />
+            </div>
+            <div class="field">
+              <label class="muted" for="upload-artist">Artist</label>
+              <input id="upload-artist" type="text" placeholder="Artist (optional)" />
+            </div>
+            <div class="field">
+              <label class="muted">Mood</label>
+              <div id="upload-mood" class="mood-pick">
+                <button type="button" class="moodbtn is-active" data-mood="happy">😄 Happy</button>
+                <button type="button" class="moodbtn" data-mood="sad">😢 Sad</button>
+                <button type="button" class="moodbtn" data-mood="angry">😠 Angry</button>
+                <button type="button" class="moodbtn" data-mood="surprised">😲 Surprised</button>
+                <button type="button" class="moodbtn" data-mood="neutral">😐 Neutral</button>
+              </div>
+            </div>
+            <button id="upload-submit" class="btn btn--accent btn--block" type="submit">Upload track</button>
+            <div id="upload-msg" class="upload-msg muted" hidden></div>
+          </form>
+
+          <div class="card">
+            <h2>Your tracks</h2>
+            <div id="upload-list" class="upload-list"><p class="muted">No uploads yet.</p></div>
+          </div>
+        </div>
       </section>
       <section class="view" data-view="search">
         <header class="view-head"><h1>Search</h1><p class="muted">Find tracks and stations.</p></header>

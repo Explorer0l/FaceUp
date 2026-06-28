@@ -24,3 +24,4 @@ Thumbs.db
 # Datasets (large) and generated training artifacts
 /data/
 ml/artifacts/
+docs/VERIFY_LOCAL_SONGS.md
