@@ -1,5 +1,8 @@
-// Focus view: a working Pomodoro countdown. P5 adds the focus music station
-// and P6 logs completed sessions to the SQLite stats backend.
+// Focus view: a working Pomodoro countdown. Completed sessions are logged to the
+// SQLite stats backend (P6); P5 will add the focus music station.
+import { emit } from "./bus.js";
+import { logFocusSession } from "./api.js";
+
 const $ = (s) => document.querySelector(s);
 
 let totalSec = 25 * 60;
@@ -28,6 +31,9 @@ function tick() {
   if (remaining === 0) {
     stop();
     $("#focus-time").textContent = "Done!";
+    // Log the completed session (>= 1 min) and let the stats panel refresh.
+    const minutes = Math.max(1, Math.round(totalSec / 60));
+    logFocusSession(minutes).then(() => emit("statschanged")).catch(() => {});
   }
 }
 

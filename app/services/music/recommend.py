@@ -21,9 +21,11 @@ def recommend(emotion: str, mode: str, limit: int | None = None) -> dict:
     emotion = (emotion or "").lower()
     moods = moods_for(emotion, mode)
 
-    # The user's own matching uploads go first (own content, demo-friendly).
+    # The user's own uploads tagged with this emotion go first (own content,
+    # demo-friendly) — surfaced in both Match and Lift so a tagged track always
+    # appears in its emotion's album.
     try:
-        user_tracks = uploads.uploads_for_emotion(emotion, mode)
+        user_tracks = uploads.uploads_for_emotion(emotion)
     except Exception:  # noqa: BLE001 - a DB hiccup shouldn't break recommendations
         user_tracks = []
 
