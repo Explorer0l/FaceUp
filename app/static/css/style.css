@@ -214,6 +214,19 @@ body {
 .rc.is-playing { border-color: var(--accent); }
 .rc.is-playing .rc__title { color: var(--accent); }
 .rc.is-playing .rc__play { opacity: 1; transform: translateY(0); }
+/* Unlike control on a favorite card */
+.rc__like {
+  position: absolute; top: 16px; right: 16px; border: none; cursor: pointer;
+  width: 30px; height: 30px; border-radius: 50%; background: #0009; color: #fff;
+  font-size: 0.9rem; line-height: 1; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s, transform 0.15s;
+}
+.rc:hover .rc__like { opacity: 1; }
+.rc__like:hover { transform: scale(1.12); background: #000c; }
+
+/* Player heart */
+#player-like.is-liked { opacity: 1; }
+#player-like:disabled { opacity: 0.35; cursor: default; }
 
 /* ---------- Add songs (P3) ---------- */
 .add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
@@ -234,9 +247,24 @@ body {
 .moodbtn:hover { color: var(--fg); border-color: var(--accent); }
 .moodbtn.is-active { background: var(--accent); border-color: var(--accent); color: #15171c; font-weight: 600; }
 .upload-msg { margin-top: 10px; font-size: 0.85rem; }
+/* Cover image picker / preview */
+.cover-pick {
+  display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center;
+  height: 96px; border: 1px dashed var(--border); border-radius: 10px; cursor: pointer;
+  background: var(--panel-2) center/cover no-repeat; color: var(--fg);
+  transition: border-color 0.15s, height 0.15s;
+}
+.cover-pick:hover, .cover-pick.is-drag { border-color: var(--accent); }
+.cover-pick.has-cover { border-style: solid; height: 150px; }
+.cover-pick__icon { font-size: 1.4rem; }
+
 .upload-list { display: flex; flex-direction: column; gap: 6px; }
 .ut { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--panel-2); border-radius: 10px; }
 .ut__emoji { font-size: 1.3rem; }
+.ut__thumb {
+  width: 36px; height: 36px; flex: none; border-radius: 8px;
+  background: #1d2740 center/cover no-repeat;
+}
 .ut__meta { min-width: 0; flex: 1; }
 .ut__title { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ut__artist { font-size: 0.78rem; }
@@ -253,6 +281,31 @@ body {
 }
 .ring span { font-size: 2.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .preset.is-active { border-color: var(--accent); color: #fff; }
+
+/* ---------- Stats (P6) ---------- */
+.stats { display: flex; flex-direction: column; gap: 16px; }
+.stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.stat-tile {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px 18px;
+}
+.stat-tile__num { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat-tile__label { font-size: 0.82rem; margin-top: 2px; }
+
+.stat-chart { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.stat-chart__head { font-size: 0.82rem; margin-bottom: 12px; }
+.bars7 { display: flex; align-items: flex-end; gap: 10px; height: 140px; }
+.bar7 { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; }
+.bar7__val { font-size: 0.72rem; font-variant-numeric: tabular-nums; min-height: 0.9rem; }
+.bar7__track {
+  flex: 1; width: 100%; max-width: 34px; border-radius: 6px 6px 0 0;
+  background: var(--panel-2); display: flex; align-items: flex-end; overflow: hidden;
+}
+.bar7__fill {
+  width: 100%; min-height: 2px; border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, var(--accent), #b98a2e); transition: height 0.2s;
+}
+.bar7__day { font-size: 0.72rem; }
 
 /* ---------- Placeholder ---------- */
 .placeholder {

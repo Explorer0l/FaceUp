@@ -10,6 +10,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from sqlalchemy import inspect, text
 from sqlmodel import Session, SQLModel, create_engine
 
 from app import models  # noqa: F401 - import so tables register on SQLModel.metadata
@@ -22,11 +23,33 @@ _engine = create_engine(
     connect_args={"check_same_thread": False},
 )
 
+# Columns added to a model *after* its table was first created. SQLModel's
+# create_all only creates missing tables, never alters existing ones, so we add
+# these in place on startup — a tiny forward-migration that keeps the dev DB and
+# its data intact without pulling in a full migration tool (e.g. Alembic).
+_ADDED_COLUMNS: dict[str, dict[str, str]] = {
+    "uploadedtrack": {"cover_filename": "VARCHAR"},
+}
+
+
+def _apply_additive_migrations() -> None:
+    inspector = inspect(_engine)
+    tables = set(inspector.get_table_names())
+    with _engine.begin() as conn:
+        for table, columns in _ADDED_COLUMNS.items():
+            if table not in tables:
+                continue  # fresh DB: create_all already made the full table
+            present = {col["name"] for col in inspector.get_columns(table)}
+            for name, ddl in columns.items():
+                if name not in present:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
+
 
 def init_db() -> None:
-    """Create the database file + tables if they don't exist yet."""
+    """Create the database file + tables, then apply additive column migrations."""
     _db_file.parent.mkdir(parents=True, exist_ok=True)
     SQLModel.metadata.create_all(_engine)
+    _apply_additive_migrations()
 
 
 @contextmanager

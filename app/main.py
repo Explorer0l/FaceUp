@@ -20,12 +20,15 @@ from app.models import UploadedTrack
 from app.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
+    FocusLogRequest,
+    FocusStatsResponse,
     HealthResponse,
     ModelsResponse,
     RecommendResponse,
+    Track,
 )
-from app.services import emotion
-from app.services.music import uploads
+from app.services import emotion, stats
+from app.services.music import likes, uploads
 from app.services.music.recommend import recommend as music_recommend
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -101,6 +104,7 @@ async def add_upload(
     title: str = Form(""),
     artist: str = Form("You"),
     emotion: str = Form("neutral"),
+    cover: UploadFile | None = None,
     session: Session = Depends(get_session),
 ) -> UploadedTrack:
     if emotion not in EMOTION_LABELS:
@@ -110,11 +114,21 @@ async def add_upload(
         raise HTTPException(422, "Empty file.")
     if len(data) > settings.max_upload_bytes:
         raise HTTPException(413, "File exceeds the maximum upload size.")
+
+    cover_data: bytes | None = None
+    cover_name = ""
+    if cover is not None and cover.filename:
+        cover_data = await cover.read()
+        if len(cover_data) > settings.max_cover_bytes:
+            raise HTTPException(413, "Cover image exceeds the maximum size.")
+        cover_name = cover.filename
+
     try:
         return await run_in_threadpool(
             uploads.save_upload, session,
             data=data, original_name=file.filename or "",
             title=title, artist=artist, emotion=emotion,
+            cover_data=cover_data, cover_name=cover_name,
         )
     except uploads.UploadError as exc:
         raise HTTPException(415, str(exc)) from exc
@@ -126,7 +140,50 @@ async def remove_upload(
 ) -> dict:
     if not uploads.delete_upload(session, track_id):
         raise HTTPException(404, "No such upload.")
+    # Keep favorites consistent: an upload that's gone can't stay liked.
+    likes.unlike_track(session, f"upload:{track_id}")
     return {"deleted": track_id}
+
+
+@app.get("/api/likes", response_model=list[Track])
+async def get_likes(session: Session = Depends(get_session)) -> list[Track]:
+    return [Track(**likes.to_track(row)) for row in likes.list_likes(session)]
+
+
+@app.get("/api/likes/ids", response_model=list[str])
+async def get_liked_ids(session: Session = Depends(get_session)) -> list[str]:
+    return likes.liked_ids(session)
+
+
+@app.post("/api/likes", response_model=Track)
+async def add_like(track: Track, session: Session = Depends(get_session)) -> Track:
+    try:
+        row = likes.like_track(session, track.model_dump())
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return Track(**likes.to_track(row))
+
+
+@app.delete("/api/likes/{track_id:path}")
+async def remove_like(
+    track_id: str, session: Session = Depends(get_session)
+) -> dict:
+    if not likes.unlike_track(session, track_id):
+        raise HTTPException(404, "That track isn't liked.")
+    return {"unliked": track_id}
+
+
+@app.get("/api/stats/focus", response_model=FocusStatsResponse)
+async def get_focus_stats(session: Session = Depends(get_session)) -> FocusStatsResponse:
+    return FocusStatsResponse(**stats.focus_summary(session))
+
+
+@app.post("/api/stats/focus", response_model=FocusStatsResponse)
+async def log_focus_stats(
+    body: FocusLogRequest, session: Session = Depends(get_session)
+) -> FocusStatsResponse:
+    stats.log_focus_session(session, body.minutes)
+    return FocusStatsResponse(**stats.focus_summary(session))
 
 
 @app.post("/api/analyze", response_model=AnalyzeResponse)
