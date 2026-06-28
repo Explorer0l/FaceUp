@@ -1,0 +1,10 @@
+{
+  "classes": [
+    "happy",
+    "sad",
+    "angry",
+    "surprised",
+    "neutral"
+  ],
+  "loop": "keras"
+}

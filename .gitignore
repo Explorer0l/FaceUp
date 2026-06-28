@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv_wsl/
 *.egg-info/
 
 # DeepFace downloads its model weights here on first run
@@ -19,3 +20,7 @@ Thumbs.db
 
 # Runtime logs
 *.log
+
+# Datasets (large) and generated training artifacts
+/data/
+docs/VERIFY_LOCAL_SONGS.md
