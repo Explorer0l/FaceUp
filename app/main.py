@@ -14,8 +14,15 @@ from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 
 from app.config import settings
-from app.schemas import AnalyzeRequest, AnalyzeResponse, HealthResponse, ModelsResponse
+from app.schemas import (
+    AnalyzeRequest,
+    AnalyzeResponse,
+    HealthResponse,
+    ModelsResponse,
+    RecommendResponse,
+)
 from app.services import emotion
+from app.services.music.recommend import recommend as music_recommend
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -50,6 +57,15 @@ async def health() -> HealthResponse:
 @app.get("/api/models", response_model=ModelsResponse)
 async def models() -> ModelsResponse:
     return ModelsResponse(models=emotion.available_models(), default="deepface")
+
+
+@app.get("/api/recommend", response_model=RecommendResponse)
+async def recommend(
+    emotion: str = "neutral", mode: str = "match", limit: int | None = None
+) -> RecommendResponse:
+    # Audius calls are blocking I/O — keep them off the event loop.
+    data = await run_in_threadpool(music_recommend, emotion, mode, limit)
+    return RecommendResponse(**data)
 
 
 @app.post("/api/analyze", response_model=AnalyzeResponse)

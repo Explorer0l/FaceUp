@@ -8,6 +8,17 @@ export async function getModels() {
   return (await fetch("/api/models")).json();
 }
 
+/** Mood-matched tracks for an emotion. `mode` is "match" (mirror) or "lift". */
+export async function getRecommendations(emotion, mode = "match", limit = 18) {
+  const q = new URLSearchParams({ emotion, mode, limit: String(limit) });
+  const res = await fetch(`/api/recommend?${q}`);
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error(detail.detail || `Recommend failed (${res.status})`);
+  }
+  return res.json();
+}
+
 /** POST a data-URL/base64 image. `mode` picks the detector; `model` the engine. */
 export async function analyzeDataURL(dataURL, mode = "upload", model = "deepface") {
   const res = await fetch("/api/analyze", {
