@@ -74,6 +74,9 @@ async function refreshList() {
     );
     el.querySelector(".ut__del").addEventListener("click", async () => {
       el.querySelector(".ut__del").disabled = true;
+      // Release the browser's hold on this file (it may be the active <audio>
+      // source) before the server tries to unlink it.
+      emit("releaseTrack", { stream_url: playable[i].stream_url });
       try {
         await deleteUpload(Number(el.dataset.id));
         await refreshList();

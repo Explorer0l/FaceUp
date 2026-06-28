@@ -9,6 +9,7 @@ Track shape as Audius tracks (source = "local").
 
 from __future__ import annotations
 
+import time
 import uuid
 from pathlib import Path
 
@@ -61,15 +62,34 @@ def list_uploads(session: Session) -> list[UploadedTrack]:
     )
 
 
+def _remove_file(path: Path, *, retries: int = 5, delay: float = 0.2) -> bool:
+    """Best-effort unlink that tolerates a transient Windows share-lock.
+
+    A file streamed by StaticFiles to a still-open <audio> element keeps an OS
+    handle until the browser drops the connection. Retry briefly, then give up
+    (the DB row is already gone, so a stray file is harmless and reclaimable).
+    """
+    for attempt in range(retries):
+        try:
+            path.unlink(missing_ok=True)
+            return True
+        except PermissionError:
+            if attempt == retries - 1:
+                return False
+            time.sleep(delay)
+    return False
+
+
 def delete_upload(session: Session, track_id: int) -> bool:
     row = session.get(UploadedTrack, track_id)
     if not row:
         return False
     f = _uploads_path() / row.filename
-    if f.is_file():
-        f.unlink()
+    # Drop the row first so the track leaves the UI even if the file is locked
+    # for a moment; then release the file best-effort.
     session.delete(row)
     session.commit()
+    _remove_file(f)
     return True
 
 
