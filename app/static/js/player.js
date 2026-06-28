@@ -43,6 +43,19 @@ async function load(i, autoplay = true) {
   }
 }
 
+function release(streamUrl) {
+  // Drop the file handle the browser holds via <audio> so the server can
+  // unlink it on Windows. removeAttribute + load() forces the connection shut.
+  if (index >= 0 && queue[index]?.stream_url === streamUrl) {
+    audio.pause();
+    audio.removeAttribute("src");
+    audio.load();
+    setPlayIcon(false);
+    renderNowPlaying(null);
+    index = -1;
+  }
+}
+
 function toggle() {
   if (!queue.length) return;
   if (audio.paused) audio.play().catch(() => {});
@@ -94,4 +107,6 @@ export function initPlayer() {
     queue = tracks || [];
     if (queue.length) load(i || 0, true);
   });
+
+  on("releaseTrack", ({ stream_url }) => release(stream_url));
 }
