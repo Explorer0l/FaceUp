@@ -182,7 +182,7 @@ async def get_focus_stats(session: Session = Depends(get_session)) -> FocusStats
 async def log_focus_stats(
     body: FocusLogRequest, session: Session = Depends(get_session)
 ) -> FocusStatsResponse:
-    stats.log_focus_session(session, body.minutes)
+    stats.log_focus_session(session, body.seconds)
     return FocusStatsResponse(**stats.focus_summary(session))
 
 

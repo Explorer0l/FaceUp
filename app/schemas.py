@@ -83,19 +83,21 @@ class Track(BaseModel):
 class FocusLogRequest(BaseModel):
     """Log a completed focus session."""
 
-    minutes: int = Field(..., gt=0, le=24 * 60, description="Session length in minutes.")
+    seconds: int = Field(
+        ..., gt=0, le=24 * 60 * 60, description="Session length in seconds."
+    )
 
 
 class DayStat(BaseModel):
     date: str = Field(..., description="ISO date (YYYY-MM-DD).")
-    minutes: int = Field(0, description="Total focus minutes that day.")
+    seconds: int = Field(0, description="Total focus seconds that day.")
 
 
 class FocusStatsResponse(BaseModel):
-    total_minutes: int = 0
+    total_seconds: int = 0
     total_sessions: int = 0
     days: list[DayStat] = Field(
-        default_factory=list, description="Per-day minutes, oldest first."
+        default_factory=list, description="Per-day seconds, oldest first."
     )
 
 

@@ -52,7 +52,7 @@ class LikedTrack(SQLModel, table=True):
 
 class FocusSession(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    minutes: int  # length of the completed focus session
+    seconds: int  # length of the completed focus session, in seconds
     completed_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc), index=True
     )

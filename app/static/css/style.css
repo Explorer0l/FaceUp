@@ -281,6 +281,15 @@ body {
 }
 .ring span { font-size: 2.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .preset.is-active { border-color: var(--accent); color: #fff; }
+.focus-presets { flex-wrap: wrap; justify-content: center; }
+.focus-custom { flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; }
+.focus-num {
+  width: 64px; text-align: center; padding: 8px; border-radius: 8px;
+  background: var(--panel-2); border: 1px solid var(--border); color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.focus-num:focus { outline: none; border-color: var(--accent); }
+.focus-colon { color: var(--muted); }
 
 /* ---------- Stats (P6) ---------- */
 .stats { display: flex; flex-direction: column; gap: 16px; }

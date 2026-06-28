@@ -79,12 +79,12 @@ export async function getFocusStats() {
   return (await fetch("/api/stats/focus")).json();
 }
 
-/** Log a completed focus session of `minutes`; returns the updated stats. */
-export async function logFocusSession(minutes) {
+/** Log a completed focus session of `seconds`; returns the updated stats. */
+export async function logFocusSession(seconds) {
   const res = await fetch("/api/stats/focus", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ minutes }),
+    body: JSON.stringify({ seconds }),
   });
   if (!res.ok) throw new Error(`Stats log failed (${res.status})`);
   return res.json();
